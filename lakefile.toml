@@ -1,0 +1,6 @@
+name = "LeanFoundations"
+version = "0.1.0"
+defaultTargets = ["LeanFoundations"]
+
+[[lean_lib]]
+name = "LeanFoundations"
