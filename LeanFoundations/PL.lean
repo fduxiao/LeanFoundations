@@ -10,9 +10,3 @@ Authors: Xiao Tan
 /-!
 # Contents
 -/
-
-
-/-!
-# Reference
-- <https://softwarefoundations.cis.upenn.edu/plf-current/index.html>
--/

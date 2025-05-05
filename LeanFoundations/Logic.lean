@@ -24,9 +24,3 @@ import LeanFoundations.Logic.Basic
 - Meta-programming: notation, syntax, macro, elaborations.
 - Make our own tactics
 -/
-
-
-/-!
-# Reference
-- <https://softwarefoundations.cis.upenn.edu/lf-current/index.html>
--/

@@ -57,6 +57,6 @@ lake build
 
 /-!
 # Reference
-- [SF](https://softwarefoundations.cis.upenn.edu)
- - [PLFA](https://plfa.github.io)
+- [Software Foundations (SF)][Pierce:SF1]
+- [Programming Language Foundations in Agda (PLFA)][plfa22_08]
 -/

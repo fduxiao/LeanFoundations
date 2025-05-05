@@ -5,7 +5,14 @@ update:
 
 # build docs
 docs:
-    cd docbuild && lake build LeanFoundations:docs
+    cd docbuild && \
+    bibtool --preserve.key.case=on \
+            --preserve.keys=on \
+            --print.use.tab=off \
+            --pass.comments=on \
+            -s -i docs/references.bib \
+            -o docs/references.bib && \
+    lake build LeanFoundations:docs
 
 # build docs and run an HTTP server
 html: docs

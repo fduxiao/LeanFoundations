@@ -9,4 +9,7 @@ Authors: Xiao Tan
 # Functional Programming in Lean
 -/
 
+
+/-- some doc string -/
+@[simp]
 def hello := "world"
