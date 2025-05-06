@@ -12,6 +12,7 @@ import LeanFoundations.PL
 
 
 
+/-TOC-/
 /-!
 # Contents
 - `LeanFoundations.Logic`: Logical foundations in Lean

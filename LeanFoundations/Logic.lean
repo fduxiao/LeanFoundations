@@ -8,6 +8,7 @@ Authors: Xiao Tan
 import LeanFoundations.Logic.Basic
 
 
+/-TOC-/
 /-!
 # Contents
 - `LeanFoundations.Logic.Basic`: Functional programming in Lean
