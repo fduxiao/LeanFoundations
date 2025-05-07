@@ -25,24 +25,29 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    strategy:
+      matrix:
+        python-version: ["3.13"]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
       - uses: leanprover/lean-action@v1
       - name: build docs
         run: |
           cd docbuild && lake build LeanFoundations:docs
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
       - name: build book
         run: |
           pip install git+https://github.com/fduxiao/leanbook
           leanbook build .
           cp -r docbuild/.lake/build/doc .lake/build/doc/api
       # deploy
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
