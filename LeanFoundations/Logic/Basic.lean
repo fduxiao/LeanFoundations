@@ -91,6 +91,67 @@ info: ././././LeanFoundations/Logic/Basic.lean:81:0: Day.sunday
 -/
 
 /-!
+## Namespaces
+
+You may have noticed that we have actually defined `Day.sunday: Day`.
+To access the term `sunday`, we have to write `Day.sunday`. This
+`Day` acts as a `namespace` so that if we have another type
+with the same *constructor* names, we won't fall into a name conflict.
+-/
+
+inductive Weekend: Type where
+  | sunday
+  | saturday
+  deriving Repr
+
+#check Weekend.sunday
+
+/-!
+If you want to use those names in a namespace directly, you can `open` it
+-/
+
+open Weekend
+#check sunday
+
+/-!
+Namespaces can also be defined manually. This is helpful if you want to
+define something with existing names. For example, `lean` has provided the
+type `Bool` with constructors `true` and `false`. To show you how to define
+it from scratch, I have to define my own `Bool` using a different name
+`MyBool`, or I can use a `namespace` to avoid it.
+-/
+
+inductive MyBool where
+  | true
+  | false
+  deriving Repr
+
+namespace scratch
+
+  inductive Bool where
+    | true | false
+
+  open Bool
+
+end scratch
+
+/-!
+Another application is to define the classical logic. As you know,
+Curry-Howard correspondence is only true for intuitionistic logic.
+But you may want to use *law of excluded middle* since we have
+the double negation monad (Glivenko's theorem) embedding classical
+logic in intuitionistic logc. We can put those classical axioms in a
+namespace to use them if necessary. (Lean also provides such a namespace
+called `Classical`, and **`lean` is classical by default**, even if you
+don't open the `Classical` namespace.)
+-/
+namespace classical
+
+  axiom em: forall (p: Prop), p ∨ ¬ p
+
+end classical
+
+/-!
 ## Functions on Enumerated Types
 
 In Lean, we define functions using `def` instead of Coq's `Definition`.
@@ -125,11 +186,6 @@ Key differences:
 3. Type annotations: Lean uses `:` instead of `:`
 4. Function definition: Lean uses `def` instead of `Definition`
 -/
-
-inductive MyBool where
-  | true
-  | false
-deriving Repr
 
 def negb (b : MyBool) : MyBool :=
   match b with
