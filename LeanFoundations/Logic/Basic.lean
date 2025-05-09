@@ -6,75 +6,89 @@ Authors: Xiao Tan and Robert Joseph George
 -/
 
 /-!
+In this file, we basically have two things: formal lean codes and comments.
+Lean codes are just what they are called and comments are lines of natural
+language encompassed in /- -/
+
+Though to write a lean program only requires those lean codes, sometimes it
+is helpful to explain them in natural language. In fact, this file is written
+as it is a book, where most lines are comments with relatively less
+lean codes.
+
+Besides, `/-! -/` is used for `markdown` display, i.e., we can have
+headers(#), citations(>), etc.
+And `/-- -/` is used for DocString (you will figure it out later by hovering
+the cursor on some term).
+Another variant of comment is `--` followed by a `newline`. For example
+```lean
+-- this is a comment.
+```
+-/
+
+/-!
 # Functional Programming in Lean
 
-This chapter introduces the basics of functional programming in Lean.
-The main differences from Coq are:
-
-1. Syntax:
-   - Lean uses `inductive` instead of `Inductive`
-   - Lean uses `def` instead of `Definition`
-   - Lean uses `|` for pattern matching instead of Coq's `|`
-   - Lean uses `.constructor` syntax for constructors (e.g., `.zero` instead of `O`)
-   - Lean uses `=>` instead of `⇒` for pattern matching
-   - Lean uses `:=` instead of `:=` for definitions
-   - Lean uses `by` instead of `Proof.` for proofs
-
-2. Type system:
-   - Lean has a more powerful type system with type classes
-   - Lean's type checker can automatically prove many simple theorems
-   - Lean uses `deriving Repr` for pretty printing
-   - Lean has better type inference
-   - Lean supports type classes and instances
-   - Lean has a more modern module system
-
-3. Tactics:
-   - Lean uses `by` instead of Coq's `Proof.`
-   - Lean has different tactics (e.g., `rw` instead of `rewrite`)
-   - Lean's proof automation is more powerful
-   - Lean uses `rfl` instead of `reflexivity`
-   - Lean has `simp` for simplification
-   - Lean has `cases` and `induction` for case analysis
-   - Lean has `exact` and `apply` for applying lemmas
-
-4. Notation:
-   - Lean uses different notation for constructors and pattern matching
-   - Lean has different syntax for type annotations
-   - Lean uses different syntax for theorem declarations
-   - Lean uses different syntax for quantifiers
-   - Lean has different syntax for implications
-   - Lean uses different syntax for equality
-
-5. Proof Style:
-   - Lean proofs are often more concise
-   - Lean has better proof automation
-   - Lean's type checker can prove more things automatically
-   - Lean has better support for proof by calculation
-   - Lean has better support for proof by induction
+The core of modern computer proof assistants is type theory (λ-calculus),
+i.e. functional programming. This chapter is intended to introduce some
+basics about functional programming in `lean`. In (dependent) type
+theory, we give a lot of **rules** to determine valid judgements `term: type`.
+Functions are just a special rule to form a certain type, and proofs are
+just the judgement `proof: proposition`, as is the Curry-Howard
+correspondence. This chapter will show you (some of) those rules, and you
+will learn more of them gradually later in the following chapters.
+You will find that programming languages based on type theory have only a
+few core features (axioms in meta language). All you need for logic can be
+built from scratch within these features.
 -/
 
 /-!
 ## Enumerated Types
 
-In Lean, we can define enumerated types using the `inductive` keyword, similar to Coq's `Inductive`.
-The main difference is that Lean uses `|` for constructors instead of Coq's `|`.
+Our first example is to define a `finite` type. Just like defining a finite
+set, you can define a type by enumerating all possible members.
+The `keyword` to define a type is `inductive`. (You can tell why it is
+called `inductive` if you have learned some type theory; otherwise,
+just accept that as a name.)
 
-Key differences:
-1. Constructor syntax: Lean uses `.constructor` instead of just the constructor name
-2. Pattern matching: Lean uses `=>` instead of `⇒`
-3. Type declarations: Lean uses `:` instead of `:`
-4. Module system: Lean has a different module system
+The following says we are going to define a new type `Day` with members
+`sunday: Day`, `monday: Day`, etc. You may think of this as
+`sunday, monady, ... ∈ Day` just like a set.
 -/
 
 inductive Day where
-  | monday
-  | tuesday
-  | wednesday
-  | thursday
+  | monday: Day
+  | tuesday: Day
+  | wednesday: Day
+  | thursday -- the `: Day` can be omitted since it can be infered from the context
   | friday
-  | saturday
-  | sunday
-deriving Repr
+  | saturday | sunday -- you can write these constructors in one line
+deriving Repr -- This line is only for some technical reason, indicating you can display `Day` by its constructors
+
+/-!
+As in set theory, things we concern are approximately series of **judgements**
+`e1 ∈ S1`, `e2 ∈ S2`, ... Each of them is either an allowed construstion
+(axiom) or the consequence of some logical inference. In type theory, the
+**judgements** are of the form `t: A`, and `inductive` is one way to extend
+the **judgement rules**. `:` can be considered as the relation on
+`terms` and `types` freely generated by those rules. In this case, the
+relation `: Day` is freely generated by **constructors** `monday`,
+`tuesday`, `wednesday`, etc.
+-/
+
+/-!
+We are then able to check the newly defined type by
+-/
+
+#check Day.sunday
+#eval Day.sunday
+
+/-!
+If you then run command `lake build`, you can see the following output.
+```
+info: ././././LeanFoundations/Logic/Basic.lean:80:0: Day.sunday : Day
+info: ././././LeanFoundations/Logic/Basic.lean:81:0: Day.sunday
+```
+-/
 
 /-!
 ## Functions on Enumerated Types
