@@ -152,6 +152,182 @@ namespace classical
 end classical
 
 /-!
+## Define functions by case analysis
+Now we know how to define a type by enumerating. Then a natural way to
+define a function out of an enumerated type is to define a value for each
+case of it. This is known as case analysis (proof by cases).
+
+We want to define a funciton `next_weekday : Day -> Day`. Apparently, we
+want to map `Day.monday` to `Day.tuesday`, `Day.tuesday` to `Day.Wednesday`,
+etc. We have to notice two things here:
+1. how to define a function;
+2. how to do case analysis.
+
+In type theory, to define a function, we use the λ-abstraction. For example,
+to define a quadratic function $f: \mathbb{R} \to \mathbb{R}$, we may write
+$f(x) = x^2$. Here, $f$ is itself a function, which does not depend on the
+name of the dummy variable $x$, e.g., $f(y)=y^2$ is the same function.
+So, a better way to think of it is $f := x \mapsto x ^ 2$. The `:=` is to
+emphasize this is a definition. Later, this was written as $\hat{x}.x^2$
+by [Whitehead and Russell][cardone2006history], and Church chose
+$\lambda x. x^2$ as the final notation. This way to define a function is
+called *λ-abstraction*.
+
+In `lean`, we also define functions in this style. Besides, you also specify
+the `type` for each term. In the above example, $\mathbb{R}$ is the type of
+real numbers with rules $0,1,2:\mathbb{R}$, and given $x: \mathbb{R}$,
+$x^2: \mathbb{R}$. Then, $λx.x^2: \mathbb{R} \to \mathbb{R}$ is the rule to
+construct a function as well as its type.
+
+So, the `next_weekday` is some
+  `λ (w: Day). if w matches monday, then tuesday; ...`
+In `lean`, we write it as follows.
+-/
+
+/--
+The next day in a week
+-/
+def next_day: Day -> Day := λ (w: Day) =>
+  match w with
+  | Day.sunday => Day.monday
+  | Day.monday => Day.tuesday
+  | .tuesday => .wednesday  -- we can omit Day.
+  | .wednesday => .thursday
+  | .thursday => .friday
+  | .friday => .saturday
+  | .saturday => .sunday
+
+
+/-!
+λ-abstraction is defined using `λ variable => term` unlike the usual
+`λ x . M` as in many text books.
+> To type the `λ` in the text editor VSCode, type `\lambda` and it will
+> change that to `λ`. If you don't remember this, then hover your cursor
+> over the `λ` and VSCode will tell you how to type it.
+
+Or if you don't like non-ASCII characters, use `fun variable => term` instead.
+-/
+
+def next_day_using_func: Day -> Day := fun (w: Day) =>
+  match w with
+  | Day.sunday => Day.monday
+  | Day.monday => Day.tuesday
+  | .tuesday => .wednesday  -- we can omit Day.
+  | .wednesday => .thursday
+  | .thursday => .friday
+  | .friday => .saturday
+  | .saturday => .sunday
+
+/-!
+If you want to apply the function to some term, just type
+`fun term`. For example, To test the function `next_day`,
+-/
+
+#eval (next_day Day.sunday)
+
+
+/-!
+### Currying
+
+The above function is defined only for one variable. In set theory,
+a function for two variables is defined as $f: A \times B \to C$. This can
+also be interpreted by the exponential rule: for each $a \in A$,
+$f(a)$ is a function $B \to C$, i.e., we many instead define
+$f: A \to (B \to C)$. This behavior is called `currying`, which is adopted
+by type theory as the definition of multi-variable functions.
+
+If we make the conventions that $\to$ is right associative, we then simply
+write it as $f: A \to B \to C$. For example, we can check whether two days
+of a week are equal.
+-/
+
+
+def day_eq_b: Day -> Day -> Bool := fun d1 =>
+  match d1 with
+  | .monday => fun d2 =>
+    match d2 with
+    | .monday => true
+    | _ => false  -- `_` is for the wildcard case, i.e., all other than `.monday`
+  | .tuesday => fun d2 =>
+    match d2 with
+    | .tuesday => true
+    | _ => false
+  | .wednesday => fun d2 =>
+     match d2 with
+    | .wednesday => true
+    | _ => false
+  | .thursday => fun d2 =>
+    match d2 with
+    | .thursday => true
+    | _ => false
+  | .friday => fun d2 =>
+    match d2 with
+    | .friday => true
+    | _ => false
+  | .saturday => fun d2 =>
+    match d2 with
+    | .saturday => true
+    | _ => false
+  | .sunday => fun d2 =>
+    match d2 with
+    | .sunday => true
+    | _ => false
+
+#eval (day_eq_b .friday) .friday
+#eval (day_eq_b .sunday) .saturday
+
+/-! Some other examples. -/
+def ABA: Day -> Bool -> Day := λ a => λ b => a
+def ABB: Day -> Bool -> Bool := λ a => λ b => b
+
+/-!
+Since we define $\to$ to be right-associative, the application
+should then be left-associative, so we can save parentheses.
+```lean
+#eval day_eq_b .friday .friday
+#eval day_eq_b .sunday .saturday
+```
+This also suggests a simpler way to define curried functions.
+(Note that `day_eq_b'` is slightly different from `day_eq_b`.)
+-/
+
+def ABA': Day -> Bool -> Day := λ a b => a
+def ABB': Day -> Bool -> Bool := λ a b => b
+
+
+def day_eq_b': Day -> Day -> Bool := fun d1 d2 =>
+  match d1 with
+  | .monday =>
+    match d2 with
+    | .monday => true
+    | _ => false  -- `_` is for the wildcard case, i.e., all other than `.monday`
+  | .tuesday =>
+    match d2 with
+    | .tuesday => true
+    | _ => false
+  | .wednesday =>
+     match d2 with
+    | .wednesday => true
+    | _ => false
+  | .thursday =>
+    match d2 with
+    | .thursday => true
+    | _ => false
+  | .friday =>
+    match d2 with
+    | .friday => true
+    | _ => false
+  | .saturday =>
+    match d2 with
+    | .saturday => true
+    | _ => false
+  | .sunday =>
+    match d2 with
+    | .sunday => true
+    | _ => false
+
+
+/-!
 ## Functions on Enumerated Types
 
 In Lean, we define functions using `def` instead of Coq's `Definition`.
