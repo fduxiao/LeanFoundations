@@ -5,6 +5,9 @@ Authors: Xiao Tan and Robert Joseph George
 
 -/
 
+import LeanFoundations.Logic.MyTactics  -- some auxiliary tactics.
+
+
 /-!
 In this file, we basically have two things: formal lean codes and comments.
 Lean codes are just what they are called and comments are lines of natural
@@ -399,31 +402,105 @@ def Day.next: Day -> Day := next_day -- certainly, you can use your own definiti
 
 /-!
 ## Booleans
+We next focus on booleans. As shown above, booleans are simply enumerated by
+`true` and `false`.
+```lean
+inductive Bool where
+  | true
+  | false
+```
 
-In Lean, booleans are built-in, but we can define our own for learning purposes.
-The syntax is similar to Coq but with Lean's conventions.
+In Lean, booleans are built-in, so we don't redefine them, we just use
+them directly. Lean also provides many other useful facts about booleans,
+under the namespace `Bool`. Since we are going to build up everything from
+scratch, we don't use them and will define them on our own.
 
-Key differences:
-1. Constructor syntax: Lean uses `.true` instead of `true`
-2. Pattern matching: Lean uses `=>` instead of `⇒`
-3. Type annotations: Lean uses `:` instead of `:`
-4. Function definition: Lean uses `def` instead of `Definition`
+We first define some functions on `Bool`, then prove some facts about it.
 -/
 
-def negb (b : MyBool) : MyBool :=
+
+def negb (b : Bool) : Bool :=
   match b with
   | .true => .false
-  | .false => .true
+  | false => true  -- we can omit the `.` since Lean open `Bool` for us by default.
 
-def andb (b1 b2 : MyBool) : MyBool :=
+def andb (b1 b2 : Bool) : Bool :=
   match b1 with
-  | .true => b2
-  | .false => .false
+  | true => b2
+  | false => false
 
-def orb (b1 b2 : MyBool) : MyBool :=
+def orb (b1 b2 : Bool) : Bool :=
   match b1 with
-  | .true => .true
-  | .false => b2
+  | true => true
+  | false => b2
+
+
+/-!
+Now, let's have our first theorem, i.e., some proposition we can prove.
+Usually, propositions begin with the keyword `theorem` and are proved
+by the *tactics* after keyword `by`.
+
+> The reader may be familiar with Curry-Howard correspondence or other proof
+> assistants, and thus expect to prove a theorem with `def` and `:=`
+> directly. Certainly, this is accepted in Lean. For beginners, I suggest
+> tactics because it is easier to read/write them.
+
+If you are using VSCode, the `by` will activate our _goal_ in the `InfoView`
+of Lean. Interactively, after we type some tactic, the goal will then be
+changed. We repeat this process until the goal can be solved by some tactic.
+You can set your cursor at certain tactic to check the goal after it.
+-/
+
+theorem not_false_is_true : negb false = true := by -- To use tactics, we begin with keyword `by`
+  compute [negb] -- This is not a standard Lean tactic. I just want to show some intermediate steps
+  eq_refl -- The only way to prove equality is reflexivity.
+  -- There's no further gaols. We have proved that.
+
+/-!
+The proof here says that
+  1. we first compute the `negb` function, which turns the goal to `true = true`;
+  2. then, we use the _reflexivity_ of equality to finish the proof.
+
+> The `compute` is not a standard Lean tactic. It is made just to perform
+> the _β-reduction_ so that you can you can observe the result of computation.
+> Unfortunately, there is not such a tactic in Lean itself. We will soon see
+> some other tactic that always try `compute` and `eq_refl` at one step,
+> so you don't have to worry about this non-standard tactic.
+
+If you don't want to always come up with a name, then use the `example` keyword.
+-/
+
+example: (orb true false) = true := by
+  compute [orb]
+  eq_refl
+
+example: (andb false true) = false := by
+  compute [andb]
+  eq_refl
+
+
+/-!
+In fact, Lean provides the `simp` tactic, so you can finish this by only
+one line.
+
+> `simp` is a very complicated tactic. It does not only apply the `eq_refl`,
+> but also tries many other automations, like `Classical.choice`
+> ```lean
+> example (p: Prop): ¬¬p -> p := by
+> simp
+> ```
+-/
+
+example: not true = false := by
+  simp
+
+
+/-! or some more complicated -/
+example: forall b: Bool, andb false b = false := by
+  intro b -- bring the variable `b: Bool` into premises
+  compute [andb]  -- by definition, `andb false` maps everything to `false`
+  eq_refl
+
 
 /-!
 ## Natural Numbers
@@ -527,7 +604,7 @@ Define the function nandb (negated-and) that returns true if either or both of i
 Hint: You can use pattern matching on both arguments at once using a comma.
 -/
 
-def nandb (b1 b2 : MyBool) : MyBool := sorry
+def nandb (b1 b2 : Bool) : Bool := sorry
 
 /-!
 ### Exercise: 1 star, standard (andb3)
@@ -536,7 +613,7 @@ Define the function andb3 that returns true when all of its inputs are true, and
 Hint: You can use pattern matching on all three arguments at once.
 -/
 
-def andb3 (b1 b2 b3 : MyBool) : MyBool := sorry
+def andb3 (b1 b2 b3 : Bool) : Bool := sorry
 
 /-!
 ### Exercise: 1 star, standard (factorial)
@@ -557,7 +634,7 @@ Define the ltb function that tests natural numbers for less-than, yielding a boo
 Hint: You can use pattern matching on both arguments at once.
 -/
 
-def ltb (n m : MyNat) : MyBool := sorry
+def ltb (n m : MyNat) : Bool := sorry
 
 /-!
 ### Exercise: 1 star, standard (identity_fn_applied_twice)
@@ -567,9 +644,9 @@ Hint: You'll need to use case analysis on the boolean argument.
 -/
 
 theorem identity_fn_applied_twice :
-  ∀ (f : MyBool → MyBool),
-  (∀ (x : MyBool), f x = x) →
-  ∀ (b : MyBool), f (f b) = b := by
+  ∀ (f : Bool → Bool),
+  (∀ (x : Bool), f x = x) →
+  ∀ (b : Bool), f (f b) = b := by
   sorry
 
 /-!
@@ -580,9 +657,9 @@ Hint: This is similar to the previous exercise, but you'll need to use the negb 
 -/
 
 theorem negation_fn_applied_twice :
-  ∀ (f : MyBool → MyBool),
-  (∀ (x : MyBool), f x = negb x) →
-  ∀ (b : MyBool), f (f b) = b := by
+  ∀ (f : Bool → Bool),
+  (∀ (x : Bool), f x = negb x) →
+  ∀ (b : Bool), f (f b) = b := by
   sorry
 
 /-!
@@ -593,7 +670,7 @@ Hint: You'll need to use case analysis on both boolean arguments.
 -/
 
 theorem andb_eq_orb :
-  ∀ (b c : MyBool),
+  ∀ (b c : Bool),
   (andb b c = orb b c) →
   b = c := by
   sorry
