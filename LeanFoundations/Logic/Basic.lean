@@ -31,9 +31,9 @@ Another variant of comment is `--` followed by a `newline`. For example
 /-!
 # Functional Programming in Lean
 
-The core of modern computer proof assistants is type theory (λ-calculus),
-i.e. functional programming. This chapter is intended to introduce some
-basics about functional programming in `lean`. In (dependent) type
+The core of modern computer proof assistants is [type theory][sorensen2006lectures]
+(λ-calculus), i.e. functional programming. This chapter is intended to introduce
+some basics about functional programming in `lean`. In (dependent) type
 theory, we give a lot of **rules** to determine valid judgements `term: type`.
 Functions are just a special rule to form a certain type, and proofs are
 just the judgement `proof: proposition`, as is the Curry-Howard
@@ -47,9 +47,9 @@ built from scratch within these features.
 /-!
 ## Enumerated Types
 
-Our first example is to define a `finite` type. Just like defining a finite
+Our first example is to define a _finite_ type. Just like defining a finite
 set, you can define a type by enumerating all possible members.
-The `keyword` to define a type is `inductive`. (You can tell why it is
+The _keyword_ to define a type is `inductive`. (You can tell why it is
 called `inductive` if you have learned some type theory; otherwise,
 just accept that as a name.)
 
@@ -88,8 +88,8 @@ We are then able to check the newly defined type by
 /-!
 If you then run command `lake build`, you can see the following output.
 ```
-info: ././././LeanFoundations/Logic/Basic.lean:82:0: Day.Sunday : Day
-info: ././././LeanFoundations/Logic/Basic.lean:83:0: Day.Sunday
+info: ././././LeanFoundations/Logic/Basic.lean:line_number1:0: Day.Sunday : Day
+info: ././././LeanFoundations/Logic/Basic.lean:line_number2:0: Day.Sunday
 ```
 -/
 
@@ -144,9 +144,12 @@ Curry-Howard correspondence is proved for intuitionistic logic.
 But you may want to use *law of excluded middle* since we have
 the double negation monad (Glivenko's theorem) embedding classical
 logic in intuitionistic logc. We can put those classical axioms in a
-namespace to use them if necessary. (Lean also provides such a namespace
-called `Classical`, and **`lean` is classical by default**, even if you
-don't open the `Classical` namespace.)
+namespace to use them if necessary.
+
+> Lean also provides such a namespace called `Classical`, and
+> **`lean` is classical by default**, even if you don't open the
+>`Classical` namespace.
+
 -/
 namespace classical
 
@@ -369,7 +372,7 @@ This is especially useful when you are defining a curried function.
 -/
 
 def day_eq_b'': Day -> Day -> Bool
-  | .Monday, .Monday => true
+  | .Monday, .Monday => true  -- we use `,` to separate them
   | .Tuesday, .Tuesday => true
   | .Wednesday, .Wednesday => true
   | .Thursday, .Thursday => true
