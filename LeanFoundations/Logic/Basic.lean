@@ -328,27 +328,74 @@ def day_eq_b': Day -> Day -> Bool := fun d1 d2 =>
 
 
 /-!
-## Functions on Enumerated Types
-
-In Lean, we define functions using `def` instead of Coq's `Definition`.
-Pattern matching syntax is similar but uses `|` instead of `|`.
-
-Key differences:
-1. Function definition: Lean uses `def` instead of `Definition`
-2. Pattern matching: Lean uses `=>` instead of `⇒`
-3. Constructor syntax: Lean uses `.constructor` instead of just the constructor name
-4. Type annotations: Lean uses `:` instead of `:`
+### Syntactic Sugar
+The above might be thought as the `standard` way to define a function by
+λ-abstraction. However, it may not be the most convenient way to define a
+function. For example, the semantics of the above `next_day` can be
+interpreted as: for every `w: Day`, we want to find a term of type `Day`
+for the application `next_day w`, i.e., the following. This *sweeter*
+way to write down the same thing with a different syntax is called a
+**syntactic sugar**. (Note the prime `'` after the name. In `lean`, we are
+unable to change a defined name.)
 -/
 
-def nextWorkingDay (d : Day) : Day :=
-  match d with
-  | .monday => .tuesday
+def next_day' (w: Day): Day := match w with
+  | Day.sunday => Day.monday
+  | Day.monday => Day.tuesday
+  | .tuesday => .wednesday  -- we can omit Day.
+  | .wednesday => .thursday
+  | .thursday => .friday
+  | .friday => .saturday
+  | .saturday => .sunday
+
+
+/-!
+Moreover, we have an even simpler syntax sugar for `match`.
+-/
+def next_day'': Day -> Day
+  | Day.sunday => Day.monday
+  | Day.monday => Day.tuesday
   | .tuesday => .wednesday
   | .wednesday => .thursday
   | .thursday => .friday
-  | .friday => .monday
-  | .saturday => .monday
-  | .sunday => .monday
+  | .friday => .saturday
+  | .saturday => .sunday
+
+/-!
+This is especially useful when you are defining a curried function.
+-/
+
+def day_eq_b'': Day -> Day -> Bool
+  | .monday, .monday => true
+  | .tuesday, .tuesday => true
+  | .wednesday, .wednesday => true
+  | .thursday, .thursday => true
+  | .friday, .friday => true
+  | .sunday, .sunday => true
+  | .saturday, .saturday => true
+  | _, _ => false
+
+/-!
+For the builtin type `Bool`, you can also use an `if ... then ... else ...`
+notation instead of matching a `true`/`false`
+-/
+
+def my_not (x: Bool): Bool := if x then false else true
+
+#eval my_not false
+
+/-!
+You can also define the `next_day` in the namespace `Day`. This time, let's
+call it `Day.next`. But to use it, you have to spell the full name:
+`Day.next .Wednesday`. The good part of that is you can use `w.next` for
+some `w: Day`.
+-/
+
+def Day.next: Day -> Day := next_day -- certainly, you can use your own definitions here
+#eval Day.next .wednesday
+#eval Day.wednesday.next
+
+
 
 /-!
 ## Booleans
