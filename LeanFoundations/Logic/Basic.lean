@@ -506,36 +506,300 @@ end scratch
 /-!
 ## Natural Numbers
 
-In Lean, natural numbers are built-in, but we can define our own for learning.
-The main difference from Coq is that Lean uses `Nat` instead of `nat` and has different syntax for constructors.
+Our next example is _natural numbers_ $\mathbb{N}$. Intuitively, natural
+numbers are how we count things. We begin with `zero: ℕ`, and to count one
+more, we use a successor function `succ: ℕ → ℕ`. Set-theoretically, we use
+the empty set ∅ for zero, and define the successor as $S(n)=n\cup\{n\}$.
+They are both well defined as _sets_ in ZFC (axioms of separation, pairing
+and union). Then, the axiom of infinity tells us that we can define ℕ.
 
-Key differences:
-1. Constructor names: Lean uses `zero` and `succ` instead of `O` and `S`
-2. Constructor syntax: Lean uses `.zero` instead of `O`
-3. Pattern matching: Lean uses `=>` instead of `⇒`
-4. Type annotations: Lean uses `:` instead of `:`
-5. Function definition: Lean uses `def` instead of `Definition`
+In type theory, we do not introduce an axiom like this. Rather, we define
+a new symbol `ℕ` and setup rules on `t: ℕ` for some term `t`. For natural
+numbers, we define two `constructors`:
+- `zero: ℕ`;
+- `succ: ℕ -> ℕ`.
+
+This means exactly that there are two ways to write down a natural number,
+either a `zero`, or a `succ` of another natural numbers. For example,
+`zero: ℕ`, `succ (succ (succ zero)): ℕ`.
+
+As before, Lean provides its own built-in natural numbers, so we put our
+definition into the `scratch` namespace and explain how it works. Later,
+we will use the built-in `Nat` type.
 -/
 
-inductive MyNat where
-  | zero : MyNat
-  | succ (n : MyNat) : MyNat
-deriving Repr
+namespace scratch
 
-def pred (n : MyNat) : MyNat :=
+inductive Nat where
+  | zero: Nat
+  | succ: Nat -> Nat
+  deriving Repr
+
+
+#check Nat.zero.succ
+#check Nat.succ (Nat.zero)
+
+open Nat
+#check zero
+#check succ
+#check zero.succ.succ
+
+/-!
+After we define the type `Nat`, we know how to construct terms of this type.
+Then, how can we get some data out of a term of type `Nat`? Still, we do the
+enumeration by `match`, while we can capture an extra number in the case of
+`succ`. Let's take the following example of the predecessor function.
+-/
+
+def Nat.pred (n : Nat) : Nat :=
   match n with
   | .zero => .zero
   | .succ n' => n'
 
-def plus (n m : MyNat) : MyNat :=
-  match n with
-  | .zero => m
-  | .succ n' => .succ (plus n' m)
 
-def mult (n m : MyNat) : MyNat :=
+#eval zero.pred  -- zero
+#eval zero.succ.succ.pred  -- zero.succ
+
+/-!
+For each natural number `n: Nat`, either it is a `Nat.zero`, or it is a
+`Nat.succ n'`. For the former case, we just use `Nat.zero` as the predecessor;
+for the latter, the predecessor is exactly `n'`.
+
+Simillarly, we define the predecessor of predecessor as follows.
+-/
+
+def Nat.pred2 (n : Nat) : Nat :=
   match n with
   | .zero => .zero
-  | .succ n' => plus m (mult n' m)
+  | .succ n' => match n' with
+    | .zero => .zero
+    | .succ n'' => n''
+
+
+/-!
+This is a bit cumbersome, since if you have to match many cases, you have
+to write a very deep match structure. Lean allows us to do the
+_pattern match_ in non-constructor forms.
+-/
+
+
+def Nat.pred2' (n : Nat) : Nat :=
+  match n with
+  | .zero => .zero
+  | .succ .zero => .zero
+  | .succ (.succ n') => n'
+
+
+#eval zero.succ.pred2'  -- zero
+#eval zero.succ.succ.succ.succ.pred2'  -- zero.succ.succ
+
+/-!
+## Recursively defined functions
+We now have a type `Bool` and a type `Nat`. It's natural to think about
+the function `evenb: Nat → Bool` that determines the evenness of a number.
+What we have now is only _pattern match_, i.e. defining function by
+cases. Naively, you may want to define the evenness function like
+```lean
+def Nat.evenb (n: Nat): Bool :=
+  match n with
+  | .zero => true
+  | .succ .zero => false
+  | .succ (.succ n') => match n' with
+    | .zero => true
+    | .succ .zero => false
+    | .succ (.succ n'') => match n'' with
+      | .zero => true
+      | .succ .zero => false
+      | .succ (.succ n''') =>
+        ...
+```
+
+Apparently, we have to repeat this forever in order to enumerate all cases.
+However, in Lean, this is not allowed. Each definable term in Lean must be
+described by finite words. This is because Lean require every funciton to
+be _total_, i.e., as a function `evenb: Nat → Boot`, `evenb` is defined on
+each `t: Nat`. If the function is defined with infinite words, it will take
+Lean infinite seconds to check whether this function is total or not.
+
+Then, how could we define it? We want some technique to encode the above
+infinite process into a finite one. For example, from the above, we can see
+some obviously repeated pattern like
+```lean
+match n with
+  | .zero => true
+  | .succ .zero => true
+  | .succ (.succ n') => ...
+```
+So, the function is repeating itself, i.e., we have the following _recursive rule_:
+- `evenb .zero := true`
+- `evenb (.succ .zero) := false`
+- `evenb (.succ (.succ n)) := evenb n`
+
+In Lean, we simply write it as
+-/
+
+def Nat.evenb: Nat -> Bool
+  | .zero => .true
+  | .succ .zero => .false
+  | .succ (.succ n) => Nat.evenb n
+
+/-!
+Or we can simplify our recursive rules:
+- `evenb .zero := true`
+- `evenb (.succ n) := not (evenb n)`
+-/
+
+def Nat.evenb': Nat -> Bool
+  | .zero => .true
+  | .succ n => n.evenb'.not  -- Bool.not (Nat.evenb' n)
+
+/-!
+Great! Lean accepts them as a well-defined functions. But, are we allowed to
+repeat whatever we want? For example, we can change the recursive rules to
+- `evenb .zero := true`
+- `evenb (.succ .zero) := false`
+- `evenb n := evenb (.succ (.succ n))`
+
+Mathematically, this is absolutely correct, but Lean will certainly refuse
+it because when we want to compute `evenb (.succ (.succ .zero))`, from the
+rules, we will then have to compute `evenb (.succ (.succ (.succ (.succ .zero))))`.
+Repeating this process many times, we never stop, which breaks the totality
+of Lean functions, since the value of `evenb` is not defined in this cases
+as it does not terminate.
+
+> You can try typing this in Lean.
+> ```lean
+> def Nat.evenb2: Nat -> Bool
+>   | .zero => true
+>   | .succ .zero => false
+>   | n => Nat.evenb2 n.succ.succ
+> ```
+> Lean will then complain `fail to show termination`.
+
+The idea behind this is quite simple: you have to reduce the complexity in
+a good way, so that the function is computable, or otherwise, we could just
+define any term of any type abusing recursion.
+
+In fact, the above relies on a subtle observation that the structure of
+recursive function on `Nat` follows the structure of the term of type `Nat`.
+To explain this, let's look at the recursive rules for `evenb'` again.
+- `evenb .zero := true`
+- `evenb (.succ n) := not (evenb n)`
+
+They stipulate a value `true: Bool` on `.zero`, and a function
+`not: Bool → Bool` on `.succ`. If you want to compute the value on
+`.succ (.succ .zero)`, you just replace `.zero` with `true` and
+`.succ` with `not`. Then, we compute the replaced expression as is already
+well-defined.
+
+In other words, to define a function `f: Nat -> A` for some type `A`, you
+specify an `a: A` and an `s: A -> A`. Then, `f` is computed by replacing
+`.zero`, `.succ` with `a`, `s` respectively. This is known as
+[catamorphism][vene2000categorical].
+
+> The case for `evenb` is a bit complicated. We leave it to the reader
+> to find its definition in terms of catamorphism.
+
+<br/>
+
+> The real situation in `Lean` is more complicated, see [here](https://leanprover.github.io/theorem_proving_in_lean4/induction_and_recursion.html#well-founded-recursion-and-induction)
+> for more infomation.
+
+Finally, let's define some arithmetic functions on `Nat`.
+-/
+
+
+/-- Addition-/
+def Nat.add (m n: Nat): Nat :=
+  match m with
+  | .zero => n
+  | .succ m' => .succ (m'.add n)
+
+/-- Multiplication -/
+def Nat.mul (m n: Nat): Nat :=
+  match m with
+  | .zero => .zero
+  | .succ m' => m'.add (m'.mul n)  -- (1 + m) * n = m + m * n
+
+
+/-- (Truncated) Substraction -/
+def Nat.sub: Nat -> Nat -> Nat
+  | .zero, _ => .zero
+  | m, .zero => m
+  | .succ m, .succ n => m.sub n
+
+
+/-!
+### Exercise: 1 star, standard (factorial)
+The factorial function is defined with the following recursive rules:
+- `factorial 0 := 1`
+- `factorial (n+1) := (n+1) * factorial n`
+-/
+def Nat.factorial: Nat -> Nat := sorry
+
+end scratch
+
+/-!
+### Exercise: 2 star, standard (NatAdd)
+Next, we define a special type of natural numbers but with addition
+a part of _the language of natural numbers_. Unlike the `Nat` we have just
+defined, `add` is not defined as a function on `NatAdd`, but a constructor
+that allows you to concatenate two numbers syntactically. In both cases,
+the number of `S` (`succ`) in some term should be the _number represented by the term_.
+-/
+
+inductive NatAdd where
+  | Z : NatAdd
+  | S : NatAdd -> NatAdd
+  | A : NatAdd -> NatAdd -> NatAdd
+
+/-!
+Apparently, we can reduce each term of type `NatAdd` to a term made of
+`S` and `Z`, i.e., we want to define some suitable function to remove
+all `A` in a term while keeping the number of `S` in that term.
+
+A first trial is the following.
+```lean
+def NatAdd.reduce: NatAdd -> NatAdd
+  | .Z => .Z
+  | .S n => .S n.reduce
+  | .A n1 n2 => match n1.reduce with
+    | .Z => n2
+    | .S m => .S (m.A n2).reduce
+    | .A m1 m2 => .Z  -- this case is unnecessary
+```
+But lean will complain `fail to show termination` (why?). Instead, we define
+an auxiliary function `add: NatAdd -> NatAdd -> NatAdd` to do the addition.
+Figure out what is the defintion of `NatAdd.reduce`.
+-/
+
+def NatAdd.add: NatAdd -> NatAdd -> NatAdd
+  | .Z, n => n
+  | .S m, n => .S (m.add n)
+  | _, _ => .Z  -- this cases is unnecessary
+
+
+def NatAdd.reduce: NatAdd -> NatAdd
+  | .Z => .Z
+  | .S n => .S n.reduce
+  | .A n1 n2 => n1.reduce.add n2.reduce
+
+
+/-!
+You can check with your definition with the following function, which
+checks whether a term contains `.A`. After `.reduce`, a term should
+not contain any `.A`
+-/
+
+def NatAdd.valueb: NatAdd -> Bool
+  | .Z => true
+  | .S n => n.valueb
+  | .A _ _ => False
+
+
+#eval (NatAdd.Z.S.add NatAdd.Z.S.S).reduce
+#eval (NatAdd.Z.S.add NatAdd.Z.S.S).reduce.valueb
+
 
 /-!
 ## Proofs
@@ -569,20 +833,27 @@ Note: In Lean, many simple proofs can be done automatically by the type checker.
 For educational purposes, we show the explicit proofs here.
 -/
 
-theorem plus_zero_n (n : MyNat) : plus .zero n = n := by
+#check Nat.zero_add
+
+namespace scratch
+theorem Nat.zero_add (n : Nat) :  Nat.zero.add n = n := by
   induction n with
   | zero => rfl
   | succ n' ih =>
-    rw [plus]
+    compute [Nat.add]
+    eq_refl
 
-theorem plus_succ_n (n m : MyNat) : plus (.succ n) m = .succ (plus n m) := by
+
+theorem plus_succ_n (n m : Nat) : n.succ.add m = (n.add m).succ := by
   induction n with
   | zero =>
-    rw [plus]
-    rfl
+    compute [Nat.add]
+    eq_refl
   | succ n' ih =>
-    rw [plus]
+    compute [Nat.add]
+    eq_refl
 
+end scratch
 /-!
 ## Exercises
 
@@ -597,6 +868,8 @@ Tips for solving exercises:
 5. Use rewriting for proofs about equality
 6. Use simplification for proofs about arithmetic
 -/
+
+namespace scratch
 
 /-!
 ### Exercise: 1 star, standard (nandb)
@@ -626,7 +899,7 @@ Translate this into Lean.
 Hint: You'll need to use pattern matching and recursion.
 -/
 
-def factorial (n : MyNat) : MyNat := sorry
+def factorial (n : Nat) : Nat := sorry
 
 /-!
 ### Exercise: 1 star, standard (ltb)
@@ -635,7 +908,7 @@ Define the ltb function that tests natural numbers for less-than, yielding a boo
 Hint: You can use pattern matching on both arguments at once.
 -/
 
-def ltb (n m : MyNat) : Bool := sorry
+def ltb (n m : Nat) : Bool := sorry
 
 /-!
 ### Exercise: 1 star, standard (identity_fn_applied_twice)
@@ -659,7 +932,7 @@ Hint: This is similar to the previous exercise, but you'll need to use the negb 
 
 theorem negation_fn_applied_twice :
   ∀ (f : Bool → Bool),
-  (∀ (x : Bool), f x = negb x) →
+  (∀ (x : Bool), f x = x.not) →
   ∀ (b : Bool), f (f b) = b := by
   sorry
 
@@ -672,7 +945,7 @@ Hint: You'll need to use case analysis on both boolean arguments.
 
 theorem andb_eq_orb :
   ∀ (b c : Bool),
-  (andb b c = orb b c) →
+  (b.and c = b.or c) →
   b = c := by
   sorry
 
@@ -695,41 +968,13 @@ def incr (b : Bin) : Bin :=
   | .B0 b' => .B1 b'
   | .B1 b' => .B0 (incr b')
 
-def bin_to_nat (b : Bin) : MyNat :=
+def bin_to_nat (b : Bin) : Nat :=
   match b with
   | .Z => .zero
-  | .B0 b' => plus (bin_to_nat b') (bin_to_nat b')
-  | .B1 b' => MyNat.succ (plus (bin_to_nat b') (bin_to_nat b'))
+  | .B0 b' => Nat.add (bin_to_nat b') (bin_to_nat b')
+  | .B1 b' => Nat.succ (Nat.add (bin_to_nat b') (bin_to_nat b'))
 
-/-!
-### Exercise: 2 stars, standard (plus_comm)
-Prove that addition is commutative.
-
-Hint: You'll need to use induction on one of the arguments.
--/
-
-theorem plus_comm (n m : MyNat) : plus n m = plus m n := by
-  sorry
-
-/-!
-### Exercise: 2 stars, standard (plus_assoc)
-Prove that addition is associative.
-
-Hint: You'll need to use induction on one of the arguments.
--/
-
-theorem plus_assoc (n m p : MyNat) : plus (plus n m) p = plus n (plus m p) := by
-  sorry
-
-/-!
-### Exercise: 2 stars, standard (mult_comm)
-Prove that multiplication is commutative.
-
-Hint: You'll need to use induction and the plus_comm theorem.
--/
-
-theorem mult_comm (n m : MyNat) : mult n m = mult m n := by
-  sorry
+end scratch
 
 /-!
 ## Testing Your Solutions
