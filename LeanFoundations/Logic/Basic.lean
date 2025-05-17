@@ -131,10 +131,9 @@ inductive MyBool where
 
 namespace scratch
 
-  inductive Bool where
-    | true | false
-
-  open Bool
+inductive Bool where
+  | true | false
+  deriving Repr
 
 end scratch
 
@@ -422,21 +421,25 @@ We first define some functions on `Bool`, then prove some facts about it.
 -/
 
 
-def negb (b : Bool) : Bool :=
+namespace scratch
+
+def Bool.not (b : Bool) : Bool :=
   match b with
   | .true => .false
-  | false => true  -- we can omit the `.` since Lean open `Bool` for us by default.
+  | .false => .true
 
-def andb (b1 b2 : Bool) : Bool :=
+def Bool.and (b1 b2 : Bool) : Bool :=
   match b1 with
-  | true => b2
-  | false => false
+  | .true => b2
+  | .false => .false
 
-def orb (b1 b2 : Bool) : Bool :=
+def Bool.or (b1 b2 : Bool) : Bool :=
   match b1 with
-  | true => true
-  | false => b2
+  | .true => .true
+  | .false => b2
 
+
+end scratch
 
 /-!
 Now, let's have our first theorem, i.e., some proposition we can prove.
@@ -454,8 +457,9 @@ changed. We repeat this process until the goal can be solved by some tactic.
 You can set your cursor at certain tactic to check the goal after it.
 -/
 
-theorem not_false_is_true : negb false = true := by -- To use tactics, we begin with keyword `by`
-  compute [negb] -- This is not a standard Lean tactic. I just want to show some intermediate steps
+namespace scratch
+theorem not_false_is_true : Bool.not .false = .true := by -- To use tactics, we begin with keyword `by`
+  compute [Bool.not] -- This is not a standard Lean tactic. I just want to show some intermediate steps
   eq_refl -- The only way to prove equality is reflexivity.
   -- There's no further gaols. We have proved that.
 
@@ -473,12 +477,12 @@ The proof here says that
 If you don't want to always come up with a name, then use the `example` keyword.
 -/
 
-example: (orb true false) = true := by
-  compute [orb]
+example: (Bool.or .true .false) = .true := by
+  compute [Bool.or]
   eq_refl
 
-example: (andb false true) = false := by
-  compute [andb]
+example: (Bool.and .false .true) = .false := by
+  compute [Bool.and]
   eq_refl
 
 
@@ -494,16 +498,10 @@ one line.
 > ```
 -/
 
-example: not true = false := by
-  simp
+example: Bool.not .true = .false := by
+  simp [Bool.not]
 
-
-/-! or some more complicated -/
-example: forall b: Bool, andb false b = false := by
-  intro b -- bring the variable `b: Bool` into premises
-  compute [andb]  -- by definition, `andb false` maps everything to `false`
-  eq_refl
-
+end scratch
 
 /-!
 ## Natural Numbers
