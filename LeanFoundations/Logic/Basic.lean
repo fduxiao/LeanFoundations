@@ -822,39 +822,239 @@ def NatAdd.bvalue: NatAdd -> Bool
 #eval (NatAdd.Z.S.add NatAdd.Z.S.S).reduce.bvalue
 
 
-/-!
-## Proofs
-
-In Lean, proofs are written using tactics similar to Coq, but with different syntax.
-The main differences are:
-1. Lean uses `by` instead of Coq's `Proof.`
-2. Lean has different tactic names and syntax
-3. Lean's proof automation is more powerful
-
-Common proof techniques in Lean:
-1. `cases`: For case analysis
-2. `induction`: For inductive proofs
-3. `rw`: For rewriting using equalities
-4. `simp`: For simplification
-5. `exact`: For applying lemmas
-6. `apply`: For applying lemmas with unification
-7. `rfl`: For reflexivity
-8. `sorry`: For admitting a proof (temporarily)
-
-Key differences in proof style:
-1. Lean proofs are often more concise
-2. Lean has better proof automation
-3. Lean's type checker can prove more things automatically
-4. Lean has better support for proof by calculation
-5. Lean has better support for proof by induction
--/
+/-! ## Proofs -/
+namespace scratch
 
 /-!
-Note: In Lean, many simple proofs can be done automatically by the type checker.
-For educational purposes, we show the explicit proofs here.
+Now, we have known some basic data type and functions on them, and have
+seen some kind of facts (theorem + proof) about them. We are going to
+introduce more proof techniques. Up to now, we only have the intuitive
+equality predicate `=` and the only way to prove it is through the
+reflexivity. Generally speaking, we prove it by first simplifying all
+computable expression, then concluding with `eq_refl`.
+
+### Universal Quantifiers
+This alone is not powerful enough for us to prove more things. For example,
+we know `false and false is false` and `false and true is false`, i.e.,
+forall `b: Bool`, we shall have `false and b is false`. In Lean, we use
+keyword `forall` or `∀` (\forall) for universal Quantifiers:
+```lean
+forall b: Bool, Bool.and .false b = .false
+```
+But, how can we prove a theorem (proposition) with universal quantifiers?
+We introduce a new technique called `intro`, which will bring the _premises_
+into current _context_. Generally speaking, a _context_ is a list of facts
+you know, with each entry in the list given a name. To understand that, we
+have to look at Lean's structure of a definition. In Lean, after each `def`
+or `theorem`, you specify some name for the thing you want to define/prove
+with a desired type (proposition). This type is then called the _goal_ in
+the interactive infomation view.
+
+> Use VSCode to show the infomation view by `Shift+Ctrl(Cmd)+Enter`.
+
+To fulfill the goal, you have to provide some suitable term/tactics under
+certain _context_. For example, to define the function $x\mapsto x^2$, you
+first assume some $x: \mathbb{R}$, and under this assumption, we can find
+$x^2: \mathbb{R}$. In this case, the assumption $x:\mathbb{R}$ is the
+context, and the $x^2: \mathbb{R}$ is how we fulfill the goal. After that,
+we will make the $x: \mathbb{R}$ into the _premise_ by making the abstraction
+$\lambda x. x^2: \mathbb{R} \to \mathbb{R}$.
+
+In other words, to find a term for the goal $\mathbb{R} \to \mathbb{R}$,
+we first bring the premise, i.e., the first $\mathbb{R}$, into the context
+by giving it a name $x: \mathbb{R}$, turning the goal into $\mathbb{R}$,
+and then find a term $x^2: \mathbb{R}$ to fulfill the goal under this
+context. Hence, by making the abstraction, we can conclude a term
+$\lambda x. x^2:\mathbb{R} -> \mathbb{R}$. In Lean, we only have to use the
+`intro` tactic to bring in premises, indicating that we want to show an
+equivalent way to define.
 -/
 
-#check Nat.zero_add
+theorem Bool.false_and: forall b: Bool, Bool.and .false b = .false := by
+  -- The gaol is `∀ (b : Bool), false.and b = false`.
+  intro b  -- Then, it turns into `false.and b = false`.
+  compute [Bool.and]  -- We are able to do the computation then.
+  eq_refl  -- Finally, conclude it by reflexivity.
+
+
+/-!
+Here's another example.
+-/
+
+theorem Nat.add_zero: forall n: Nat, Nat.add .zero n = n := by
+  intro n
+  compute [Nat.add]
+  eq_refl
+
+
+/-! Or, you can just use `simp` -/
+theorem Nat.one_add: forall n: Nat, Nat.zero.succ.add n = n.succ := by
+  simp [Nat.add]
+
+
+/-!
+### Exercise: 1 star, standard (mul_zero)
+-/
+theorem Nat.mul_zero: forall n: Nat, Nat.mul .zero n = .zero := sorry
+
+
+/-!
+### Case Analysis
+We next think about the fact that `forall b: Bool, b.not.not = b`. This is
+apparently true because either `b` is `true` or `false`, `b.not.not` will
+be itself. However, if you try to compute `b.not.not` by
+```lean
+theorem Bool.not_not: forall (b: Bool), b.not.not = b := by
+  intro b
+  compute [Bool.not]
+```
+, Lean will expand it
+into
+```lean
+match
+  (match b with
+  | true => false
+  | false => true) with
+| true => false
+| false => true
+```
+and then get stuck. This is because Lean can only compute a concrete
+term. In the previous examples, you know how to do the computation for
+`zero.add n` because it is literally in the definition of `Nat.add`.
+Now, we want to match `b: Bool`, which is an arbitrary term. Lean gets
+lost here. Luckily, we can solve this by assuming `b: Bool` is either
+`true: Bool` or `false: Bool`. In either case, Lean can figure out how
+to do the computation.
+-/
+
+theorem Bool.not_not: forall (b: Bool), b.not.not = b := by
+  intro b  -- Bring `b` into context.
+  -- Do the case analysis.
+  cases b with
+  | true =>
+    -- You can observe that the `b` is replaced by `true`.
+    compute [Bool.not]  -- So, we can compute it.
+    eq_refl
+  | false => simp [Bool.not] -- or simply use a `simp`
+
+
+/-!
+Let's try some other example. We want to show the commutativity of `Bool.and`,
+where we use _case analysis_ twice.
+-/
+
+theorem Bool.and_comm: forall (b1 b2: Bool), b1.and b2 = b2.and b1 := by
+  intro b1 b2  -- you can `intro` many premises at one time.
+  cases b1 with
+  | true => match b2 with
+    | true => eq_refl
+    | false => simp [Bool.and]
+  | false => match b2 with
+    | true => simp [Bool.and]
+    | false => eq_refl
+
+/-!
+### Exercise: 1 star, standard (or_comm)
+-/
+theorem Bool.or_comm: forall (b1 b2: Bool), b1.or b2 = b2.or b1 := sorry
+
+
+/-!
+### Implication
+We have learned the most basic predicate `=` and we can prefix an equality
+with universal quantifiers. What if we want add other conditions? For example,
+if `m n: Nat` are even numbers, then so is `m.add n`. Using _context_, we
+encode this proposition as a goal `(m.add n).beven = true` under the context
+that `m n: Nat` and `H1: m.beven = true`, `H2: n.beven = true`.
+
+> `H` means _hypothesis_, which is the conventional variable name for
+> propositions in a context.
+
+However, in Lean, we cannot write a _context_ directly. Just like universal
+quantifiers, we prefix the goal with premises by `->` or `→` (\to):
+```lean
+example: forall m n: Nat,
+  m.beven = .true ->
+  n.beven = .true ->
+  (m.add n).beven = .true
+:= ...
+```
+
+To prove such a theorem, we still use the `intro` tactic to turn the goal
+into the equivalent _context-wise_ form. After that, we can make use of
+such a variable in the context. We then give a simple case that when the
+goal is in the context, we can fulfill it by the `exact` tactic. We will
+learn some more complication usage (`apply`) in the future chapters.
+-/
+
+theorem imp_example: forall n: Nat, n = n -> n = n := by
+  intro n
+  intro H
+  exact H
+
+
+/-!
+### Rewriting
+We have seen how to prove an equality, but how can we make use of it?
+The answer is the `rewrite` tactic. If you have `E: a = b` in your context,
+you can rewrite all the occurences of `a` into `b` (or the converse).
+-/
+
+example: forall m n: Nat, m = n -> m.add m = n.add n := by
+  intro m n  -- Intro m n as usual.
+  intro E  -- For implication.
+  -- Our goal is `m.add m = n.add n`.
+  rewrite [E]  -- This turns it into `n.add n = n.add n`.
+  eq_refl  -- Finally, reflexivity.
+
+/-!
+This example rewrites `m` into `n` by using the _left to right_ direction
+of `E`. Since equalities are symmetric, we can certainly use the other
+direction by typing a `<-` or `←` (\<-) to specifiy.
+
+> You can use `rw` as an abbreviation of `rewrite`, while it will also
+> try some cheap tactics to close the goal.
+-/
+
+example: forall m n: Nat, m = n -> m.add m = n.add n := by
+  intro m n  -- Intro m n as usual.
+  intro E  -- For implication.
+  -- Our goal is `m.add m = n.add n`.
+  rewrite [<-E]  -- This turns it into `m.add m = m.add m`.
+  eq_refl  -- Finally, reflexivity.
+
+
+/-!
+For a proved theorem/premise prefixed with universal quantifiers, we can
+directly rewrite it, and Lean will try to figure out the suitable term
+after quantifiers. In the following example, Lean will try to unify the
+`b.not.not` in `Bool.not_not`, and it finally determins that `b.not` can
+be the quantified `b` and simplify our goal (certainly `b` and `b.not.not`
+also works).
+
+> This is one way to make use of a universally-quantified proposition.
+> Lean implicitly adds some syntactic sugar here (type-inference). Later,
+> we will explain it in details.
+-/
+example: forall b: Bool, b.not.not.not.not = b := by
+  intro b
+  rewrite [Bool.not_not]
+  rewrite [Bool.not_not]
+  eq_refl
+
+end scratch
+
+/-!
+> Now, we step out of the namespace `scratch`. In fact, Lean have already
+> provided those theorems for us. We will gradually move to the `Nat` and
+> `Bool` defined by Lean as we learn more. For pedagogical purpose, we put
+> our own definitions in the namespace `scratch`. You can check those in
+> Lean prelude by `#check`. For example
+> ```lean
+> #check Nat.zero_add
+> #check Bool.and_assoc
+> ```
+-/
 
 namespace scratch
 theorem Nat.zero_add (n : Nat) :  Nat.zero.add n = n := by
