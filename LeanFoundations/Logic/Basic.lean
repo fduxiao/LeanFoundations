@@ -745,7 +745,9 @@ def Nat.ble: Nat -> Nat -> Bool
 
 /-!
 ### Exercise: 1 star, standard (ltb)
-Define `less than`.
+Define the ltb function that tests natural numbers for less-than, yielding a boolean.
+
+Hint: You can use pattern matching on both arguments at once.
 -/
 def blt: Nat -> Nat -> Bool := sorry
 
@@ -1076,7 +1078,7 @@ theorem plus_succ_n (n m : Nat) : n.succ.add m = (n.add m).succ := by
 
 end scratch
 /-!
-## Exercises
+## More Exercises
 
 The following exercises are translated from Software Foundations.
 Try to solve them yourself! Each exercise is marked with its difficulty level.
@@ -1094,12 +1096,12 @@ namespace scratch
 
 /-!
 ### Exercise: 1 star, standard (nandb)
-Define the function nandb (negated-and) that returns true if either or both of its inputs are false.
+Define the function nand (negated-and) that returns true if either or both of its inputs are false.
 
 Hint: You can use pattern matching on both arguments at once using a comma.
 -/
 
-def nandb (b1 b2 : Bool) : Bool := sorry
+def Bool.nand (b1 b2 : Bool) : Bool := sorry
 
 /-!
 ### Exercise: 1 star, standard (andb3)
@@ -1108,28 +1110,7 @@ Define the function andb3 that returns true when all of its inputs are true, and
 Hint: You can use pattern matching on all three arguments at once.
 -/
 
-def andb3 (b1 b2 b3 : Bool) : Bool := sorry
-
-/-!
-### Exercise: 1 star, standard (factorial)
-Recall the standard mathematical factorial function:
-       factorial(0)  =  1
-       factorial(n)  =  n * factorial(n-1)     (if n>0)
-Translate this into Lean.
-
-Hint: You'll need to use pattern matching and recursion.
--/
-
-def factorial (n : Nat) : Nat := sorry
-
-/-!
-### Exercise: 1 star, standard (ltb)
-Define the ltb function that tests natural numbers for less-than, yielding a boolean.
-
-Hint: You can use pattern matching on both arguments at once.
--/
-
-def ltb (n m : Nat) : Bool := sorry
+def Bool.and3 (b1 b2 b3 : Bool) : Bool := sorry
 
 /-!
 ### Exercise: 1 star, standard (identity_fn_applied_twice)
@@ -1203,16 +1184,16 @@ end scratch
 Each exercise comes with test cases that you can use to verify your solutions.
 For example, for the nandb function:
 
-Example test_nandb1: (nandb .true .false) = .true := by
+example: (Bool.nand .true .false) = .true := by
   sorry
 
-Example test_nandb2: (nandb .false .false) = .true := by
+example: (Bool.nand .false .false) = .true := by
   sorry
 
-Example test_nandb3: (nandb .false .true) = .true := by
+example: (Bool.nand .false .true) = .true := by
   sorry
 
-Example test_nandb4: (nandb .true .true) = .false := by
+example: (Bool.nand .true .true) = .false := by
   sorry
 
 Try to prove these test cases after implementing the functions!
