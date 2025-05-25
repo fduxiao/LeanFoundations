@@ -596,11 +596,11 @@ def Nat.pred2' (n : Nat) : Nat :=
 /-!
 ## Recursively defined functions
 We now have a type `Bool` and a type `Nat`. It's natural to think about
-the function `evenb: Nat → Bool` that determines the evenness of a number.
+the function `beven: Nat → Bool` that determines the evenness of a number.
 What we have now is only _pattern match_, i.e. defining function by
 cases. Naively, you may want to define the evenness function like
 ```lean
-def Nat.evenb (n: Nat): Bool :=
+def Nat.beven (n: Nat): Bool :=
   match n with
   | .zero => true
   | .succ .zero => false
@@ -617,7 +617,7 @@ def Nat.evenb (n: Nat): Bool :=
 Apparently, we have to repeat this forever in order to enumerate all cases.
 However, in Lean, this is not allowed. Each definable term in Lean must be
 described by finite words. This is because Lean require every funciton to
-be _total_, i.e., as a function `evenb: Nat → Boot`, `evenb` is defined on
+be _total_, i.e., as a function `beven: Nat → Boot`, `beven` is defined on
 each `t: Nat`. If the function is defined with infinite words, it will take
 Lean infinite seconds to check whether this function is total or not.
 
@@ -631,48 +631,48 @@ match n with
   | .succ (.succ n') => ...
 ```
 So, the function is repeating itself, i.e., we have the following _recursive rule_:
-- `evenb .zero := true`
-- `evenb (.succ .zero) := false`
-- `evenb (.succ (.succ n)) := evenb n`
+- `beven .zero := true`
+- `beven (.succ .zero) := false`
+- `beven (.succ (.succ n)) := beven n`
 
 In Lean, we simply write it as
 -/
 
-def Nat.evenb: Nat -> Bool
+def Nat.beven: Nat -> Bool
   | .zero => .true
   | .succ .zero => .false
-  | .succ (.succ n) => Nat.evenb n
+  | .succ (.succ n) => Nat.beven n
 
 /-!
 Or we can simplify our recursive rules:
-- `evenb .zero := true`
-- `evenb (.succ n) := not (evenb n)`
+- `beven .zero := true`
+- `beven (.succ n) := not (beven n)`
 -/
 
-def Nat.evenb': Nat -> Bool
+def Nat.beven': Nat -> Bool
   | .zero => .true
-  | .succ n => n.evenb'.not  -- Bool.not (Nat.evenb' n)
+  | .succ n => n.beven'.not  -- Bool.not (Nat.beven' n)
 
 /-!
 Great! Lean accepts them as a well-defined functions. But, are we allowed to
 repeat whatever we want? For example, we can change the recursive rules to
-- `evenb .zero := true`
-- `evenb (.succ .zero) := false`
-- `evenb n := evenb (.succ (.succ n))`
+- `beven .zero := true`
+- `beven (.succ .zero) := false`
+- `beven n := beven (.succ (.succ n))`
 
 Mathematically, this is absolutely correct, but Lean will certainly refuse
-it because when we want to compute `evenb (.succ (.succ .zero))`, from the
-rules, we will then have to compute `evenb (.succ (.succ (.succ (.succ .zero))))`.
+it because when we want to compute `beven (.succ (.succ .zero))`, from the
+rules, we will then have to compute `beven (.succ (.succ (.succ (.succ .zero))))`.
 Repeating this process many times, we never stop, which breaks the totality
-of Lean functions, since the value of `evenb` is not defined in this cases
+of Lean functions, since the value of `beven` is not defined in this cases
 as it does not terminate.
 
 > You can try typing this in Lean.
 > ```lean
-> def Nat.evenb2: Nat -> Bool
+> def Nat.beven2: Nat -> Bool
 >   | .zero => true
 >   | .succ .zero => false
->   | n => Nat.evenb2 n.succ.succ
+>   | n => Nat.beven2 n.succ.succ
 > ```
 > Lean will then complain `fail to show termination`.
 
@@ -682,9 +682,9 @@ define any term of any type abusing recursion.
 
 In fact, the above relies on a subtle observation that the structure of
 recursive function on `Nat` follows the structure of the term of type `Nat`.
-To explain this, let's look at the recursive rules for `evenb'` again.
-- `evenb .zero := true`
-- `evenb (.succ n) := not (evenb n)`
+To explain this, let's look at the recursive rules for `beven'` again.
+- `beven .zero := true`
+- `beven (.succ n) := not (beven n)`
 
 They stipulate a value `true: Bool` on `.zero`, and a function
 `not: Bool → Bool` on `.succ`. If you want to compute the value on
@@ -697,7 +697,7 @@ specify an `a: A` and an `s: A -> A`. Then, `f` is computed by replacing
 `.zero`, `.succ` with `a`, `s` respectively. This is known as
 [catamorphism][vene2000categorical].
 
-> The case for `evenb` is a bit complicated. We leave it to the reader
+> The case for `beven` is a bit complicated. We leave it to the reader
 > to find its definition in terms of catamorphism.
 
 <br/>
@@ -791,14 +791,14 @@ checks whether a term contains `.A`. After `.reduce`, a term should
 not contain any `.A`
 -/
 
-def NatAdd.valueb: NatAdd -> Bool
+def NatAdd.bvalue: NatAdd -> Bool
   | .Z => true
-  | .S n => n.valueb
+  | .S n => n.bvalue
   | .A _ _ => False
 
 
 #eval (NatAdd.Z.S.add NatAdd.Z.S.S).reduce
-#eval (NatAdd.Z.S.add NatAdd.Z.S.S).reduce.valueb
+#eval (NatAdd.Z.S.add NatAdd.Z.S.S).reduce.bvalue
 
 
 /-!
