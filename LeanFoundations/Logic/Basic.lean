@@ -729,6 +729,27 @@ def Nat.sub: Nat -> Nat -> Nat
   | .succ m, .succ n => m.sub n
 
 
+/-- Equality -/
+def Nat.beq: Nat -> Nat -> Bool
+  | .zero, .zero => .true
+  | .succ m, .succ n => Nat.beq m n
+  | _, _ => .false
+
+
+/-- Less than or equal to -/
+def Nat.ble: Nat -> Nat -> Bool
+  | .zero, _ => .true
+  | .succ _, .zero => .false
+  | .succ m, .succ n => Nat.ble m n
+
+
+/-!
+### Exercise: 1 star, standard (ltb)
+Define `less than`.
+-/
+def blt: Nat -> Nat -> Bool := sorry
+
+
 /-!
 ### Exercise: 1 star, standard (factorial)
 The factorial function is defined with the following recursive rules:
