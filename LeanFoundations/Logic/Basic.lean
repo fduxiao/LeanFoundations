@@ -841,7 +841,7 @@ we know `false and false is false` and `false and true is false`, i.e.,
 forall `b: Bool`, we shall have `false and b is false`. In Lean, we use
 keyword `forall` or `∀` (\forall) for universal Quantifiers:
 ```lean
-forall b: Bool, Bool.and .false b = .false
+forall (b: Bool), Bool.and .false b = .false
 ```
 But, how can we prove a theorem (proposition) with universal quantifiers?
 We introduce a new technique called `intro`, which will bring the _premises_
@@ -872,7 +872,7 @@ $\lambda x. x^2:\mathbb{R} -> \mathbb{R}$. In Lean, we only have to use the
 equivalent way to define.
 -/
 
-theorem Bool.false_and: forall b: Bool, Bool.and .false b = .false := by
+theorem Bool.false_and: forall (b: Bool), Bool.and .false b = .false := by
   -- The gaol is `∀ (b : Bool), false.and b = false`.
   intro b  -- Then, it turns into `false.and b = false`.
   compute [Bool.and]  -- We are able to do the computation then.
@@ -883,21 +883,74 @@ theorem Bool.false_and: forall b: Bool, Bool.and .false b = .false := by
 Here's another example.
 -/
 
-theorem Nat.add_zero: forall n: Nat, Nat.add .zero n = n := by
+theorem Nat.add_zero: forall (n: Nat), Nat.add .zero n = n := by
   intro n
   compute [Nat.add]
   eq_refl
 
 
 /-! Or, you can just use `simp` -/
-theorem Nat.one_add: forall n: Nat, Nat.zero.succ.add n = n.succ := by
+theorem Nat.one_add: forall (n: Nat), Nat.zero.succ.add n = n.succ := by
   simp [Nat.add]
 
 
 /-!
 ### Exercise: 1 star, standard (mul_zero)
 -/
-theorem Nat.mul_zero: forall n: Nat, Nat.mul .zero n = .zero := sorry
+theorem Nat.mul_zero: forall (n: Nat), Nat.mul .zero n = .zero := sorry
+
+/-!
+You can also prefix the universal quantifier twice, e.g.,
+-/
+theorem Bool.false_and_and: forall (b1: Bool),
+  (forall (b2: Bool), (Bool.false.and b1).and b2 = .false)
+:= by
+  intro b1  -- you can `intro` many premises at one time.
+  intro b2
+  simp [Bool.and]
+
+
+/-!
+We also have some syntactic sugar for this case. First, you can save the
+`forall` and parentheses.
+-/
+
+theorem Bool.false_and_and': forall (b1 b2: Bool),
+  (Bool.false.and b1).and b2 = .false
+:= by
+  intro b1 b2
+  simp [Bool.and]
+
+
+theorem Bool.false_and_and'': forall b1 b2: Bool,
+  (Bool.false.and b1).and b2 = .false
+:= by
+  intro b1 b2
+  simp [Bool.and]
+
+
+/-!
+> But for variables of different types, you have to add the parentheses.
+> ```lean
+> forall (b: Bool) (n: Nat), something_about_b_and_n
+> ```
+
+For functions, we don't have to always write the λ-abstractions. We can
+do the same for theorems too. This is equivalent to say that we bring
+variables into context directly.
+-/
+
+theorem Bool.false_and_and''' (b1: Bool): forall b2: Bool,
+  (Bool.false.and b1).and b2 = .false
+:= by
+  intro b2
+  simp [Bool.and]
+
+
+theorem Bool.false_and_and'''' (b1 b2: Bool):
+  (Bool.false.and b1).and b2 = .false
+:= by
+  simp [Bool.and]
 
 
 /-!
@@ -946,7 +999,7 @@ where we use _case analysis_ twice.
 -/
 
 theorem Bool.and_comm: forall (b1 b2: Bool), b1.and b2 = b2.and b1 := by
-  intro b1 b2  -- you can `intro` many premises at one time.
+  intro b1 b2
   cases b1 with
   | true => match b2 with
     | true => eq_refl
