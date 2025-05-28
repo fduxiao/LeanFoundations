@@ -6,6 +6,7 @@ Authors: Xiao Tan
 -/
 
 import LeanFoundations.Logic.Basic
+import LeanFoundations.Logic.Induction
 
 
 /-TOC-/
