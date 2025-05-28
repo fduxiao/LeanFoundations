@@ -6,6 +6,28 @@ Authors: Xiao Tan and Robert Joseph George
 
 import LeanFoundations.Logic.Basic
 
+/-!
+# Splitting into Modules
+
+You may have noticed the `import` keyword (both in this and the previous chapter).
+This is a mechanism used to seperate different logic concepts. In general, you
+can put everything in a very long file, but this style is not practical since
+you cannot quickly seek a certain line. Instead, we split it into several files.
+In Lean, each such a file is called a **module**, and modules are organized as
+a **package**.
+
+
+In each Lean package (including this one), which is just a directory with
+certain files, we put a `lakefile.toml` describing the structure of the package.
+Usually, there is a root module specified in that file, e.g. `LeanFoundations`
+in our case. So, in the package, you can see a `LeanFoundations.lean`. Next
+to it, a directory with the same name is often there, which serves as the
+_components_ of the package. Then, in any Lean file of the package, you can
+use `import RootName.some.path.to.module` to import an module. After that,
+you are allowed to use the definitions, theorems, inductive types, etc in
+the imported module.
+-/
+
 set_option linter.unusedVariables false -- If you don't want to see the unused variables warning.
 
 /-!
@@ -25,31 +47,6 @@ induction in Lean follows a similar pattern:
 1. Prove the base case (e.g., the property holds for 0)
 2. Prove the inductive step (e.g., if the property holds for n, then it also holds for n+1)
 3. Conclude that the property holds for all cases
-
-The main differences from Coq that you'll notice in this chapter are:
-
-1. **Import System**:
-   - Lean uses `import` instead of Coq's `Require Export`
-   - Lean has a different module system with packages organized in a hierarchical manner
-   - Lean uses the `lake` build system for package management instead of Coq's `_CoqProject`
-
-2. **Proof Style**:
-   - Lean uses the `by` keyword to begin tactic proofs instead of Coq's `Proof.`
-   - Lean tactics have different names and syntax, though many concepts are similar
-   - Lean's proof automation is often more powerful than Coq's
-   - Lean uses `rfl` as a shorthand for reflexivity instead of Coq's `reflexivity`
-   - Lean uses `rw` for rewriting instead of Coq's `rewrite`
-
-3. **Induction**:
-   - Lean's induction syntax is more concise and readable
-   - Lean provides better support for working with induction hypotheses
-   - Lean's type checker can automatically prove many simple cases
-   - Lean uses `cases` for simple case analysis and `induction` for full induction
-
-4. **Assertions**:
-   - Lean uses `have` instead of Coq's `assert` for introducing local facts
-   - Lean has cleaner syntax for local lemmas
-   - Lean's proof automation can handle more cases automatically
 -/
 
 /-!
@@ -67,19 +64,20 @@ on the right gives the same number n. This is written mathematically as:
 In Lean, we could try to prove this directly using reflexivity, but it won't work:
 -/
 
-theorem add_zero_r_firsttry (n : MyNat) : plus n .zero = n := by
+namespace scratch
+theorem Nat.add_zero_firsttry (n : Nat) : n.add .zero = n := by
   -- Just applying reflexivity doesn't work here.
   -- The reason is that `n` is an arbitrary unknown number, so Lean can't
-  -- directly compute the result of `plus n .zero`. The recursion in the definition
-  -- of `plus` requires a concrete value for `n` to unfold properly.
+  -- directly compute the result of `Nat.add n .zero`. The recursion in the definition
+  -- of `add` requires a concrete value for `n` to unfold properly.
   --
-  -- The definition of `plus` from the previous chapter was:
-  -- def plus (n m : MyNat) : MyNat :=
+  -- The definition of `add` from the previous chapter was:
+  -- def Nat.add (n m : Nat) : Nat :=
   --   match n with
   --   | .zero => m
-  --   | .succ n' => .succ (plus n' m)
+  --   | .succ n' => .succ (Nat.add n' m)
   --
-  -- For Lean to simplify `plus n .zero`, it needs to know whether n is .zero or .succ n'
+  -- For Lean to simplify `n.add .zero`, it needs to know whether n is .zero or .succ n'
   -- so it can choose the right branch of the match statement.
   sorry
 
@@ -88,7 +86,7 @@ We might try to use case analysis with the `cases` tactic, which breaks `n` into
 its possible constructors (.zero and .succ n'). Let's see how far that gets us:
 -/
 
-theorem add_zero_r_secondtry (n : MyNat) : plus n .zero = n := by
+theorem Nat.add_zero_secondtry (n : Nat) : n.add .zero = n := by
   cases n with
   | zero => rfl  -- For n = 0, we have 0 + 0 = 0, which is true by reflection
   | succ n' =>
@@ -113,24 +111,24 @@ If P(n) is some property involving natural numbers, to prove P(n) holds for all 
 In Lean, we apply this principle using the `induction` tactic. Let's see how it works:
 -/
 
-theorem add_zero_r (n : MyNat) : plus n .zero = n := by
+theorem add_zero_r (n : Nat) : n.add .zero = n := by
   induction n with
   | zero =>
     -- Base case: Prove that 0 + 0 = 0
     -- This follows directly from the definition of plus
     rfl
-  | succ n' ih =>
+  | succ n' IH =>
     -- Inductive step: Prove that (succ n') + 0 = succ n'
     -- We assume the induction hypothesis (ih): n' + 0 = n'
 
     -- First, we use the definition of plus:
     -- (succ n') + 0 = succ(n' + 0)
-    rw [plus]
+    rw [Nat.add]
 
     -- Now we have: succ(n' + 0) = succ n'
     -- By our induction hypothesis, n' + 0 = n'
     -- So we can rewrite: succ(n' + 0) to succ(n')
-    rw [ih]
+    rw [IH]
     -- And we're done! succ n' = succ n' is reflexively true
 
 /-!
@@ -159,31 +157,32 @@ recursive calls in proofs.
 
 /-!
 Let's look at another example. We'll prove that subtracting a number from itself
-always results in zero.
+always results in zero. Recall the definition of substraction.
+```lean
+def Nat.sub: Nat -> Nat -> Nat
+  | .zero, _ => .zero
+  | m, .zero => m
+  | .succ m, .succ n => m.sub n
+```
 -/
 
-def minus (n m : MyNat) : MyNat :=
-  match n, m with
-  | n, .zero => n           -- n - 0 = n
-  | .zero, .succ m' => .zero -- 0 - (m+1) = 0 (can't go below zero)
-  | .succ n', .succ m' => minus n' m' -- (n+1) - (m+1) = n - m
 
-theorem minus_n_n (n : MyNat) : minus n n = .zero := by
+theorem Nat.sub_self (n : Nat) : n.sub n = .zero := by
   induction n with
   | zero =>
     -- Base case: 0 - 0 = 0
     -- By definition of minus, minus 0 0 = 0
     rfl
-  | succ n' ih =>
+  | succ n' IH =>
     -- Inductive step: (n'+1) - (n'+1) = 0
     -- We assume ih: n' - n' = 0
 
     -- By definition of minus:
     -- minus (succ n') (succ n') = minus n' n'
-    rw [minus]
+    rw [Nat.sub]
 
     -- Now use the induction hypothesis
-    rw [ih]
+    rw [IH]
     -- Done! We've shown that (n'+1) - (n'+1) = 0
 
 /-!
@@ -214,7 +213,7 @@ Tips for solving these exercises:
 Prove the following using induction. You might need previously proven results.
 -/
 
-theorem mul_zero_r (n : MyNat) : mult n .zero = .zero := by
+theorem Nat.mul_zero (n : Nat) : n.mul .zero = .zero := by
   /-
   We need to prove that multiplying any natural number by 0 gives 0.
   This is a good candidate for induction since multiplication is defined recursively.
@@ -229,9 +228,10 @@ theorem mul_zero_r (n : MyNat) : mult n .zero = .zero := by
   -/
   sorry
 
-theorem plus_n_Sm (n m : MyNat) : MyNat.succ (plus n m) = plus n (MyNat.succ m) := by
+
+theorem Nat.add_succ (n m : Nat) : n.add m.succ = (n.add m).succ := by
   /-
-  This theorem says that S(n + m) = n + S(m).
+  This theorem says that n + S(m) = S(n + m).
   In other words, adding 1 to (n + m) is the same as adding 1 to m and then adding n.
 
   Think about how plus is defined recursively and consider using induction on n.
@@ -241,7 +241,8 @@ theorem plus_n_Sm (n m : MyNat) : MyNat.succ (plus n m) = plus n (MyNat.succ m) 
   -/
   sorry
 
-theorem add_comm (n m : MyNat) : plus n m = plus m n := by
+
+theorem Nat.add_comm (n m : Nat) : n.add m = m.add n := by
   /-
   This theorem states that addition is commutative: n + m = m + n.
 
@@ -253,7 +254,8 @@ theorem add_comm (n m : MyNat) : plus n m = plus m n := by
   -/
   sorry
 
-theorem add_assoc (n m p : MyNat) : plus (plus n m) p = plus n (plus m p) := by
+
+theorem Nat.add_assoc (n m p : Nat) : (n.add m).add p = n.add (m.add p) := by
   /-
   This theorem states that addition is associative: (n + m) + p = n + (m + p).
 
@@ -265,11 +267,11 @@ theorem add_assoc (n m p : MyNat) : plus (plus n m) p = plus n (plus m p) := by
   sorry
 
 /-!
-### Exercise: 2 stars, standard (double_plus)
+### Exercise: 2 stars, standard (double_add)
 Consider the following function, which doubles its argument:
 -/
 
-def double (n : MyNat) : MyNat :=
+def Nat.double (n : Nat) : Nat :=
   match n with
   | .zero => .zero
   | .succ n' => .succ (.succ (double n'))
@@ -284,7 +286,7 @@ For example:
 Now, use induction to prove this simple fact about double:
 -/
 
-theorem double_plus (n : MyNat) : double n = plus n n := by
+theorem Nat.double_plus (n : Nat) : n.double = n.add n := by
   /-
   This theorem states that doubling a number is the same as adding it to itself.
 
@@ -298,19 +300,20 @@ theorem double_plus (n : MyNat) : double n = plus n n := by
 
 /-!
 ### Exercise: 2 stars, standard (eqb_refl)
-The function `eqb` tests whether two natural numbers are equal,
-returning a boolean result. We want to prove that `eqb n n` always
+Recall how we define the (Boolean) equality between natural numbers
+```lean
+def Nat.beq: Nat -> Nat -> Bool
+  | .zero, .zero => .true
+  | .succ m, .succ n => Nat.beq m n
+  | _, _ => .false
+```
+The function `beq` tests whether two natural numbers are equal,
+returning a boolean result. We want to prove that `n.beq n` always
 returns `true` for any natural number `n`.
 -/
 
-def eqb (n m : MyNat) : MyBool :=
-  match n, m with
-  | .zero, .zero => .true
-  | .zero, .succ m' => .false
-  | .succ n', .zero => .false
-  | .succ n', .succ m' => eqb n' m'
 
-theorem eqb_refl (n : MyNat) : eqb n n = .true := by
+theorem Nat.beq_refl (n : Nat) : n.beq n = .true := by
   /-
   This theorem states that comparing any number to itself with eqb always returns true.
 
@@ -322,6 +325,14 @@ theorem eqb_refl (n : MyNat) : eqb n n = .true := by
 
 /-!
 ### Exercise: 2 stars, standard, optional (even_S)
+Recall the definition of evenness of a natural number.
+```lean
+def Nat.beven: Nat -> Bool
+  | .zero => .true
+  | .succ .zero => .false
+  | .succ (.succ n) => Nat.beven n
+```
+
 One inconvenient aspect of our definition of even is the recursive call on n - 2.
 This makes proofs about even n harder when done by induction on n, since we may need
 an induction hypothesis about n - 2.
@@ -330,16 +341,10 @@ The following lemma gives an alternative characterization of even for successor
 numbers that works better with induction:
 -/
 
-def even (n : MyNat) : Bool :=
-  match n with
-  | .zero => .true
-  | .succ .zero => .false
-  | .succ (.succ n') => even n'
-
-theorem even_S (n : MyNat) : even (MyNat.succ n) = negb (even n) := by
+theorem Nat.beven_succ (n : Nat) : n.succ.beven = n.beven.not := by
   /-
   This theorem states that a number n+1 is even if and only if n is odd.
-  In boolean terms, even(S n) = negb(even n).
+  In boolean terms, even(S n) = not (even n).
 
   This requires case analysis on n and careful reasoning about the definition of even.
 
@@ -359,33 +364,34 @@ without needing to create a separate top-level theorem. This is useful when we
 need a specific fact that may not be general enough to deserve its own named theorem.
 -/
 
-theorem mult_0_plus' (n m : MyNat) : mult (plus (plus n .zero) .zero) m = mult n m := by
-  have h : plus (plus n .zero) .zero = n := by
+theorem mult_0_plus' (n m : Nat) : ((n.add .zero).add .zero).mul m = n.mul m := by
+  have H : (n.add .zero).add .zero = n := by
     /-
     This is our "sub-proof" where we establish that n + 0 + 0 = n
     We could have used add_zero_r, but we're showing how to do it directly
     -/
-    rw [add_comm]  -- Swap n and 0, giving 0 + n + 0 = n
-    rw [plus]      -- Compute 0 + n = n, giving n + 0 = n
-    rw [add_comm]  -- Swap n and 0 again, giving 0 + n = n
-    rfl            -- 0 + n = n is true by definition
+    rewrite [Nat.add_comm]  -- Swap n and 0, giving 0 + n + 0 = n
+    simp [Nat.add]      -- Compute 0 + n = n, giving n + 0 = n
+    rewrite [Nat.add_comm]  -- Swap n and 0 again, giving 0 + n = n
+    eq_refl            -- 0 + n = n is true by definition
 
   /-
   Now we use our local lemma h to rewrite the goal:
-  mult (plus (plus n .zero) .zero) m = mult n m
+  ((n.add .zero).add .zero).mul m = n.mul m
   becomes:
-  mult n m = mult n m
+  n.mul m = n.mul m
   -/
-  rw [h]
+  rewrite [H]
+  eq_refl
   /- And we're done! mult n m = mult n m is reflexively true -/
 
 /-!
 The `have` tactic introduces two subgoals:
 
-1. First, we must prove the statement we're asserting (in this case, that `plus (plus n .zero) .zero = n`).
-   We name this assertion `h` so we can refer to it later.
+1. First, we must prove the statement we're asserting (in this case, that `(n.add .zero).add .zero = n`).
+   We name this assertion `H` so we can refer to it later.
 
-2. Second, we continue with our main proof, but now we have `h` available as a premise
+2. Second, we continue with our main proof, but now we have `H` available as a premise
    that we can use.
 
 This technique is invaluable for breaking down complex proofs into smaller, more
@@ -398,7 +404,7 @@ and debug.
 Use `have` to help prove add_shuffle3. You don't need to use induction yet.
 -/
 
-theorem add_shuffle3 (n m p : MyNat) : plus n (plus m p) = plus m (plus n p) := by
+theorem add_shuffle3 (n m p : Nat) : n.add (m.add p) = m.add (n.add p) := by
   /-
   This theorem states that n + (m + p) = m + (n + p).
   Intuitively, it means we can shuffle the order of addition as long as
@@ -417,7 +423,7 @@ Now prove commutativity of multiplication. You will probably want to look for
 Hint: what is n × (1 + k)?
 -/
 
-theorem mul_comm (m n : MyNat) : mult m n = mult n m := by
+theorem Nat.mul_comm (m n : Nat) : m.mul n = n.mul m := by
   /-
   This theorem states that multiplication is commutative: m × n = n × m.
 
@@ -432,18 +438,20 @@ theorem mul_comm (m n : MyNat) : mult m n = mult n m := by
 
 /-!
 ### Exercise: 2 stars, standard, optional (plus_leb_compat_l)
-If a hypothesis has the form H: P → a = b, then rewrite H will rewrite a to b
-in the goal, and add P as a new subgoal. Use that in the inductive step of this exercise.
+
+Recall the definition of _less than or equal to_
+```lean
+def Nat.ble: Nat -> Nat -> Bool
+  | .zero, _ => .true
+  | .succ _, .zero => .false
+  | .succ m, .succ n => Nat.ble m n
+```
 -/
 
-def leb (n m : MyNat) : MyBool :=
-  match n, m with
-  | .zero, _ => .true           -- 0 is always less than or equal to any number
-  | .succ n', .zero => .false   -- n+1 is never less than or equal to 0
-  | .succ n', .succ m' => leb n' m'  -- n+1 ≤ m+1 if and only if n ≤ m
-
-theorem plus_leb_compat_l (n m p : MyNat) :
-  leb n m = .true → leb (plus p n) (plus p m) = .true := by
+theorem Nat.add_ble_compat_l (n m p : Nat) :
+  n.ble m = .true -> (p.add n).ble (p.add m) = .true
+:= by
+  intro H
   /-
   This theorem states that if n ≤ m, then p + n ≤ p + m.
   In other words, adding the same number to both sides of an inequality
@@ -465,7 +473,8 @@ case analysis (destruct), or (c) it also requires induction. Write down your pre
 Then fill in the proof.
 -/
 
-theorem leb_refl (n : MyNat) : leb n n = .true := by
+
+theorem Nat.ble_refl (n : Nat) : n.ble n = .true := by
   /-
   This theorem states that n ≤ n for any natural number n.
 
@@ -475,7 +484,7 @@ theorem leb_refl (n : MyNat) : leb n n = .true := by
   -/
   sorry
 
-theorem zero_neqb_S (n : MyNat) : eqb .zero (MyNat.succ n) = .false := by
+theorem Nat.zero_not_beq_succ (n : Nat) : Nat.zero.beq n.succ = .false := by
   /-
   This theorem states that 0 is never equal to any successor number.
 
@@ -485,7 +494,7 @@ theorem zero_neqb_S (n : MyNat) : eqb .zero (MyNat.succ n) = .false := by
   -/
   sorry
 
-theorem andb_false_r (b : Bool) : andb b .false = .false := by
+theorem Bool.and_false (b : Bool) : b.and .false = .false := by
   /-
   This theorem states that AND with false on the right is always false.
 
@@ -495,7 +504,7 @@ theorem andb_false_r (b : Bool) : andb b .false = .false := by
   -/
   sorry
 
-theorem S_neqb_0 (n : MyNat) : eqb (MyNat.succ n) .zero = .false := by
+theorem Nat.succ_not_beq_zero (n : Nat) : n.succ.beq .zero = .false := by
   /-
   This theorem states that no successor number is equal to 0.
 
@@ -505,7 +514,7 @@ theorem S_neqb_0 (n : MyNat) : eqb (MyNat.succ n) .zero = .false := by
   -/
   sorry
 
-theorem mult_1_l (n : MyNat) : mult (MyNat.succ .zero) n = n := by
+theorem Nat.mul_one (n : Nat) : Nat.zero.succ.mul n = n := by
   /-
   This theorem states that 1 × n = n for any natural number n.
 
@@ -516,7 +525,8 @@ theorem mult_1_l (n : MyNat) : mult (MyNat.succ .zero) n = n := by
   sorry
 
 theorem all3_spec (b c : Bool) :
-  orb (andb b c) (orb (negb b) (negb c)) = .true := by
+  (b.and c).or (b.not.or c.not) = .true
+:= by
   /-
   This is a boolean logic theorem: (b ∧ c) ∨ (¬b ∨ ¬c) is always true.
 
@@ -526,8 +536,8 @@ theorem all3_spec (b c : Bool) :
   -/
   sorry
 
-theorem mult_plus_distr_r (n m p : MyNat) :
-  mult (plus n m) p = plus (mult n p) (mult m p) := by
+theorem Nat.right_distrib (n m p : Nat) :
+  (n.add m).mul p = (n.mul p).add (m.mul p) := by
   /-
   This theorem states the distributive property of multiplication over addition:
   (n + m) × p = (n × p) + (m × p)
@@ -538,8 +548,8 @@ theorem mult_plus_distr_r (n m p : MyNat) :
   -/
   sorry
 
-theorem mult_assoc (n m p : MyNat) :
-  mult n (mult m p) = mult (mult n m) p := by
+theorem Mat.mul_assoc (n m p : Nat) :
+  n.mul (m.mul p) = (n.mul m).mul p := by
   /-
   This theorem states that multiplication is associative:
   n × (m × p) = (n × m) × p
@@ -562,7 +572,7 @@ Use the `replace` tactic to do a proof of add_shuffle3', just like add_shuffle3
 but without needing `have`.
 -/
 
-theorem add_shuffle3' (n m p : MyNat) : plus n (plus m p) = plus m (plus n p) := by
+theorem add_shuffle3' (n m p : Nat) : n.add (m.add p) = m.add (n.add p) := by
   /-
   This theorem states the same property as add_shuffle3, but you should
   use the replace tactic instead of have.
@@ -619,7 +629,7 @@ confirms that "incrementing" means the same thing in both representations.
 -/
 
 theorem bin_to_nat_pres_incr (b : Bin) :
-  bin_to_nat (incr b) = MyNat.succ (bin_to_nat b) := by
+  bin_to_nat (incr b) = (bin_to_nat b).succ := by
   /-
   This theorem establishes that the diagram above commutes - incrementing in
   binary and then converting to nat gives the same result as converting to nat
@@ -649,7 +659,7 @@ to binary and back again. When designing this function, think about how binary
 numbers are constructed - each digit position represents a power of 2.
 -/
 
-def nat_to_bin (n : MyNat) : Bin :=
+def nat_to_bin (n : Nat) : Bin :=
   /-
   To convert a natural number to binary, we need a systematic approach.
 
@@ -681,7 +691,7 @@ functions preserve the value of the number, which is crucial for using binary
 representation reliably.
 -/
 
-theorem nat_bin_nat (n : MyNat) : bin_to_nat (nat_to_bin n) = n := by
+theorem nat_bin_nat (n : Nat) : bin_to_nat (nat_to_bin n) = n := by
   /-
   This theorem establishes that converting from nat to bin and back to nat
   preserves the original number.
@@ -729,7 +739,7 @@ This lemma establishes a property about the double function that will be useful
 for our normalization approach.
 -/
 
-theorem double_incr (n : MyNat) : double (MyNat.succ n) = MyNat.succ (MyNat.succ (double n)) := by
+theorem double_incr (n : Nat) : n.succ.double = n.double.succ.succ := by
   /-
   This theorem relates doubling the successor of n to adding 2 to the double of n.
 
@@ -883,3 +893,5 @@ theorem bin_nat_bin (b : Bin) : nat_to_bin (bin_to_nat b) = normalize b := by
   individually will make the main theorem more manageable.
   -/
   sorry
+
+end scratch
