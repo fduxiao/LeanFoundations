@@ -897,7 +897,7 @@ theorem Nat.one_add: forall (n: Nat), Nat.zero.succ.add n = n.succ := by
 /-!
 ### Exercise: 1 star, standard (mul_zero)
 -/
-theorem Nat.mul_zero: forall (n: Nat), Nat.mul .zero n = .zero := sorry
+theorem Nat.zero_mul: forall (n: Nat), Nat.mul .zero n = .zero := sorry
 
 /-!
 You can also prefix the universal quantifier twice, e.g.,
