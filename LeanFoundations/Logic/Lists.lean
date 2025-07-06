@@ -242,6 +242,58 @@ theorem fstSwapIsSnd : ∀ p : NatProd, p.swap.fst = p.snd := by
   -- Then think about the definitions of fst, swapPair, and snd
   sorry  -- TODO: Prove this
 
+
+/-!
+## Using structure to organize data
+Though we defined `NatProd` with inductive type, it can be observed that we have
+exactly defined one *constructor*, which takes two necessary components to yield
+a term of type `NatProd`. Also, from the above equalities, we can conclude that
+a term is determined by the two components, i.e.,  *projections* `fst` and `snd`.
+
+For such a type with only one constructor, Lean provides a syntactic sugar
+called *structure*.
+-/
+
+structure AnotherNatProd where
+  fst: Nat
+  snd: Nat
+
+
+#check AnotherNatProd.mk 0 1
+
+/-!
+As shown in the syntax, you only have to specify all the *fields* (components) of
+the type. Lean will then use *type_name*.mk as the unique constructor. And the field
+names are automatically the projections.
+-/
+
+#eval (AnotherNatProd.mk 0 1).fst
+
+/-!
+> You may want to use a different name for the constructor. Lean allows you to
+> change the default name by writting a `::`.
+> ```lean
+> structure NatProd where
+>   pair ::
+>     fst: Nat
+>     snd: Nat
+> ```
+-/
+
+/-!
+Besides, Lean also provides a semantic way to write a term and to get a new term
+based on it.
+-/
+
+def some_pair: AnotherNatProd := { fst := 1, snd := 2}
+def another_pair := {
+    some_pair with
+      snd := 3
+  }
+#eval another_pair.fst  -- 1
+#eval another_pair.snd  -- 3
+#eval some_pair.snd  -- 2
+
 /-!
 ## Lists of Numbers
 
