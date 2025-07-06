@@ -7,6 +7,7 @@ Authors: Xiao Tan
 
 import LeanFoundations.Logic.Basic
 import LeanFoundations.Logic.Induction
+-- import LeanFoundations.Logic.Lists
 
 
 /-TOC-/
@@ -14,7 +15,7 @@ import LeanFoundations.Logic.Induction
 # Contents
 - `LeanFoundations.Logic.Basic`: Functional programming in Lean
 - `LeanFoundations.Logic.Induction`: Proof by induction
-- Structured data
+- `LeanFoundations.Logic.Lists`: Structured data
 - Polymorphism
 - Tactics and logics: I tend to merge them together becasue tactics are specific to logics
 - Inductively defined propositions

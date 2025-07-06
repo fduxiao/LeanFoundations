@@ -61,20 +61,20 @@ pair structure.
 -/
 
 -- Functions that extract components from pairs use pattern matching
-def fst (p : NatProd) : Nat :=
+def NatProd.fst (p : NatProd) : Nat :=
   match p with
   | NatProd.pair x y => x  -- Extract the first component x
 
-def snd (p : NatProd) : Nat :=
+def NatProd.snd (p : NatProd) : Nat :=
   match p with
   | NatProd.pair x y => y  -- Extract the second component y
 
 -- Let's test our extraction functions
-#eval fst (NatProd.pair 3 5)  -- Should evaluate to 3
-#eval snd (NatProd.pair 3 5)  -- Should evaluate to 5
+#eval (NatProd.pair 3 5).fst  -- Should evaluate to 3
+#eval (NatProd.pair 3 5).snd  -- Should evaluate to 5
 
 -- We can also compose these operations
-#eval fst (NatProd.pair (snd (NatProd.pair 5 6)) 7)  -- First extracts 6, then pairs (6,7), then extracts 6
+#eval (NatProd.pair (NatProd.pair 5 6).snd 7).fst  -- First extracts 6, then pairs (6,7), then extracts 6
 
 /-!
 The pattern matching expression `match p with | NatProd.pair x y => ...` works like this:
@@ -93,17 +93,20 @@ of the pair, which we can use in the body of the function.
 
 Writing `NatProd.pair` every time we want to create a pair is tedious. Let's define
 a more convenient notation using the familiar mathematical syntax for pairs: (x, y).
+Since Lean provides its own syntactic sugar for pair, we use `NatProd(,)` for this
+case.
 -/
 
 -- Define notation for pairs to make them more readable
-notation "(" x ", " y ")" => NatProd.pair x y
+notation "NatProd(" x ", " y ")" => NatProd.pair x y
 
 -- Now we can use the more familiar notation
-#eval fst (3, 5)  -- This is much cleaner!
+#eval NatProd(3, 5).fst  -- This is much cleaner!
 
 -- Let's test some more examples with the new notation
-#eval snd (42, 99)  -- Should evaluate to 99
-#eval fst (0, fst (5, 6))  -- Should evaluate to 0
+#eval NatProd(42, 99).snd  -- Should evaluate to 99
+#eval NatProd(0, NatProd(5, 6).fst).fst  -- Should evaluate to 0
+
 
 /-!
 In Lean, the `notation` directive lets us define custom syntax. Here, we've defined
@@ -116,22 +119,22 @@ implementation. The expression `(3, 5)` is still represented internally as
 -/
 
 -- We can now rewrite our projection functions using the notation
-def fst' (p : NatProd) : Nat :=
+def NatProd.fst' (p : NatProd) : Nat :=
   match p with
-  | (x, y) => x  -- Using the pair notation in pattern matching
+  | NatProd(x, y) => x  -- Using the pair notation in pattern matching
 
-def snd' (p : NatProd) : Nat :=
+def NatProd.snd' (p : NatProd) : Nat :=
   match p with
-  | (x, y) => y  -- Using the pair notation in pattern matching
+  | NatProd(x, y) => y  -- Using the pair notation in pattern matching
 
 -- Let's define a function to swap the elements of a pair
-def swapPair (p : NatProd) : NatProd :=
+def NatProd.swap (p : NatProd) : NatProd :=
   match p with
-  | (x, y) => (y, x)  -- Create a new pair with components swapped
+  | NatProd(x, y) => NatProd(y, x)  -- Create a new pair with components swapped
 
 -- Let's test our swap function
-#eval fst (swapPair (3, 5))  -- Should be 5
-#eval snd (swapPair (3, 5))  -- Should be 3
+#eval (NatProd(3, 5).swap).fst  -- Should be 5
+#eval (NatProd(3, 5).swap).snd  -- Should be 3
 
 /-!
 The `swapPair` function demonstrates how we can both decompose and construct pairs
@@ -190,9 +193,9 @@ evidence that demonstrates the truth of our claims.
 -/
 
 -- Use explicit constructor to avoid ambiguity
-theorem surjectivePairing' : ∀ n m : Nat, NatProd.pair n m = NatProd.pair (fst (NatProd.pair n m)) (snd (NatProd.pair n m)) := by
+theorem surjectivePairing' : ∀ n m : Nat, NatProd.pair n m = NatProd.pair NatProd(n, m).fst NatProd(n, m).snd := by
   intro n m
-  rfl  -- This works because both sides are syntactically the same after evaluation
+  eq_refl  -- This works because both sides are syntactically the same after evaluation
 
 /-!
 The theorem `surjectivePairing'` states that for any pair `(n, m)`, if we extract its
@@ -200,25 +203,25 @@ components using `fst` and `snd` and then construct a new pair with those compon
 we get back the original pair. This may seem obvious, but it's important to prove
 formally.
 
-The proof is a single line: `rfl`, which stands for "reflexivity". This tactic
+The proof is a single line: `eq_refl`, which stands for "reflexivity". This tactic
 proves goals of the form `X = X`. Lean automatically evaluates `fst (NatProd.pair n m)`
 to `n` and `snd (NatProd.pair n m)` to `m`, making the right side identical to the left.
 -/
 
 -- But if we state it more generally, we need to destructure:
-theorem surjectivePairing : ∀ p : NatProd, p = NatProd.pair (fst p) (snd p) := by
+theorem surjectivePairing : ∀ p : NatProd, p = NatProd.pair p.fst p.snd := by
   intro p
   match p with
-  | (n, m) => rfl  -- Or: cases p with | pair n m => rfl
+  | NatProd(n, m) => eq_refl  -- Or: cases p with | pair n m => eq_refl
 
 /-!
 The theorem `surjectivePairing` states the same property but for an arbitrary pair `p`,
 rather than a pair explicitly constructed as `NatProd.pair n m`. This makes the proof
 a bit more complex.
 
-We can't just use `rfl` directly because Lean doesn't automatically unfold the
+We can't just use `eq_refl` directly because Lean doesn't automatically unfold the
 definition of an arbitrary pair `p`. Instead, we need to explicitly pattern match
-on `p` to expose its structure. Once we've done that, we can use `rfl` to complete
+on `p` to expose its structure. Once we've done that, we can use `eq_refl` to complete
 the proof.
 
 This pattern of "expose the structure, then prove by simplification" is very common
@@ -226,14 +229,14 @@ in formal verification.
 -/
 
 -- EXERCISE: 1 star, standard (snd_fst_is_swap)
-theorem sndFstIsSwap : ∀ p : NatProd, NatProd.pair (snd p) (fst p) = swapPair p := by
+theorem sndFstIsSwap : ∀ p : NatProd, NatProd.pair p.snd p.fst = p.swap := by
   intro p
   -- Hint: Think about how to expose the structure of p
   -- Then consider how swapPair is defined
   sorry  -- TODO: Prove this
 
 -- EXERCISE: 1 star, standard, optional (fst_swap_is_snd)
-theorem fstSwapIsSnd : ∀ p : NatProd, fst (swapPair p) = snd p := by
+theorem fstSwapIsSnd : ∀ p : NatProd, p.swap.fst = p.snd := by
   intro p
   -- Hint: First understand what the theorem is stating in plain language
   -- Then think about the definitions of fst, swapPair, and snd
@@ -311,7 +314,7 @@ def myList2 := 1 :: 2 :: 3 :: []      -- Same list, using right-associativity
 #check myList2
 
 -- We can verify they're the same list by checking their structure
-example : myList1 = myList2 := by rfl  -- The proof succeeds, confirming equality
+example : myList1 = myList2 := by eq_refl  -- The proof succeeds, confirming equality
 
 /-!
 Now let's implement some fundamental operations on lists. These will form the
@@ -394,7 +397,7 @@ infixl:65 " ++ " => app
 -- Example with explicit NatList constructors
 def exampleList1 : NatList := 1 :: 2 :: 3 :: []
 def exampleList2 : NatList := 4 :: 5 :: []
-example : exampleList1 ++ exampleList2 = 1 :: 2 :: 3 :: 4 :: 5 :: [] := by rfl
+example : exampleList1 ++ exampleList2 = 1 :: 2 :: 3 :: 4 :: 5 :: [] := by eq_refl
 
 /-!
 Finally, let's implement the standard head and tail operations for lists:
@@ -457,7 +460,7 @@ def nonzeros (l : NatList) : NatList :=
 
 example : nonzeros (0 :: 1 :: 0 :: 2 :: 3 :: 0 :: 0 :: []) = 1 :: 2 :: 3 :: [] := by
   -- Verify that nonzeros removes all zeros
-  rfl -- If your implementation is correct, this should work
+  eq_refl -- If your implementation is correct, this should work
 
 /-!
 The `oddMembers` function should keep only the odd numbers from a list.
@@ -478,7 +481,7 @@ def oddMembers (l : NatList) : NatList :=
 
 example : oddMembers (0 :: 1 :: 0 :: 2 :: 3 :: 0 :: 0 :: []) = 1 :: 3 :: [] := by
   -- Verify that oddMembers keeps only odd numbers
-  rfl -- If your implementation is correct, this should work
+  eq_refl -- If your implementation is correct, this should work
 
 /-!
 The `countOddMembers` function should count how many odd numbers are in a list.
@@ -493,7 +496,7 @@ def countOddMembers (l : NatList) : Nat :=
 
 example : countOddMembers (1 :: 0 :: 3 :: 1 :: 4 :: 5 :: []) = 4 := by
   -- Verify that countOddMembers counts correctly
-  rfl -- If your implementation is correct, this should work
+  eq_refl -- If your implementation is correct, this should work
 
 -- EXERCISE: 3 stars, advanced (alternate)
 -- Interleave elements from two lists
@@ -518,17 +521,17 @@ def alternate (l1 l2 : NatList) : NatList :=
 
 example : alternate (1 :: 2 :: 3 :: []) (4 :: 5 :: 6 :: []) = 1 :: 4 :: 2 :: 5 :: 3 :: 6 :: [] := by
   -- Verify that alternate interleaves the lists
-  rfl -- If your implementation is correct, this should work
+  eq_refl -- If your implementation is correct, this should work
 
 -- Let's test alternate with lists of different lengths
 example : alternate (1 :: []) (4 :: 5 :: 6 :: []) = 1 :: 4 :: 5 :: 6 :: [] := by
-  rfl -- First list runs out first
+  eq_refl -- First list runs out first
 
 example : alternate (1 :: 2 :: 3 :: []) (4 :: []) = 1 :: 4 :: 2 :: 3 :: [] := by
-  rfl -- Second list runs out first
+  eq_refl -- Second list runs out first
 
 example : alternate [] (4 :: 5 :: []) = 4 :: 5 :: [] := by
-  rfl -- First list is empty
+  eq_refl -- First list is empty
 
 /-!
 ## Bags (Multisets) via Lists
@@ -568,7 +571,7 @@ def count (v : Nat) (s : Bag) : Nat :=
 
 example : count 1 (1 :: 2 :: 3 :: 1 :: 4 :: 1 :: []) = 3 := by
   -- Verify that count counts correctly
-  rfl -- If your implementation is correct, this should work
+  eq_refl -- If your implementation is correct, this should work
 
 /-!
 The `sum` function should combine two bags by concatenating their lists.
@@ -582,7 +585,7 @@ def sum : Bag → Bag → Bag :=
 
 example : count 1 (sum (1 :: 2 :: 3 :: []) (1 :: 4 :: 1 :: [])) = 3 := by
   -- Verify that sum works correctly with count
-  rfl -- If your implementation is correct, this should work
+  eq_refl -- If your implementation is correct, this should work
 
 /-!
 The `add` function should add a value to a bag (increasing its multiplicity by 1).
@@ -594,7 +597,7 @@ def add (v : Nat) (s : Bag) : Bag :=
 
 example : count 1 (add 1 (1 :: 4 :: 1 :: [])) = 3 := by
   -- Verify that add increases the count correctly
-  rfl -- If your implementation is correct, this should work
+  eq_refl -- If your implementation is correct, this should work
 
 /-!
 The `member` function should check if a value appears at least once in a bag.
@@ -613,11 +616,11 @@ def member (v : Nat) (s : Bag) : Bool :=
 
 example : member 1 (1 :: 4 :: 1 :: []) = true := by
   -- Verify that member works correctly for present values
-  rfl -- If your implementation is correct, this should work
+  eq_refl -- If your implementation is correct, this should work
 
 example : member 2 (1 :: 4 :: 1 :: []) = false := by
   -- Verify that member works correctly for absent values
-  rfl -- If your implementation is correct, this should work
+  eq_refl -- If your implementation is correct, this should work
 
 -- EXERCISE: 3 stars, standard, optional (bag_more_functions)
 -- More complex bag operations
@@ -640,11 +643,11 @@ def removeOne (v : Nat) (s : Bag) : Bag :=
 -- Tests for removeOne
 example : count 5 (removeOne 5 (2 :: 1 :: 5 :: 4 :: 1 :: [])) = 0 := by
   -- Verify that removeOne removes exactly one occurrence
-  rfl -- If your implementation is correct, this should work
+  eq_refl -- If your implementation is correct, this should work
 
 example : count 5 (removeOne 5 (2 :: 1 :: 4 :: 1 :: [])) = 0 := by
   -- Verify that removeOne handles absence correctly
-  rfl -- If your implementation is correct, this should work
+  eq_refl -- If your implementation is correct, this should work
 
 /-!
 The `removeAll` function should remove all occurrences of a value from a bag.
@@ -663,7 +666,7 @@ def removeAll (v : Nat) (s : Bag) : Bag :=
 -- Tests for removeAll
 example : count 5 (removeAll 5 (2 :: 1 :: 5 :: 4 :: 5 :: 1 :: 4 :: [])) = 0 := by
   -- Verify that removeAll removes all occurrences
-  rfl -- If your implementation is correct, this should work
+  eq_refl -- If your implementation is correct, this should work
 
 /-!
 The `included` function should check if one bag is included in another.
@@ -686,11 +689,11 @@ def included (s1 s2 : Bag) : Bool :=
 -- Tests for included
 example : included (1 :: 2 :: []) (2 :: 1 :: 4 :: 1 :: []) = true := by
   -- Verify that included works for actual inclusion
-  rfl -- If your implementation is correct, this should work
+  eq_refl -- If your implementation is correct, this should work
 
 example : included (1 :: 2 :: 2 :: []) (2 :: 1 :: 4 :: 1 :: []) = false := by
   -- Verify that included checks multiplicities correctly
-  rfl -- If your implementation is correct, this should work
+  eq_refl -- If your implementation is correct, this should work
 
 /-!
 ## Reasoning About Lists
@@ -705,7 +708,7 @@ Many facts about lists can be proved by simplification:
 
 theorem nilApp : ∀ l : NatList, [] ++ l = l := by
   intro l
-  rfl  -- Works because `[]` in `app` matches the first pattern
+  eq_refl  -- Works because `[]` in `app` matches the first pattern
 
 /-!
 The theorem `nilApp` states that appending any list to the empty list gives back
@@ -713,7 +716,7 @@ the original list. This is a basic property of appending that follows directly
 from the definition of `app`. When the first list is empty, `app` immediately
 returns the second list.
 
-The proof is a single line: `rfl` (reflexivity), which works because Lean can
+The proof is a single line: `eq_refl` (reflexivity), which works because Lean can
 automatically simplify `[] ++ l` to `l` based on the definition of `app`.
 -/
 
@@ -721,8 +724,8 @@ automatically simplify `[] ++ l` to `l` based on the definition of `app`.
 theorem tlLengthPred : ∀ l : NatList, Nat.pred (length l) = length (tl l) := by
   intro l
   cases l with
-  | nil => rfl                        -- For empty list, both sides are 0
-  | cons _ _ => rfl                   -- For non-empty list, both sides simplify to same value
+  | nil => eq_refl                        -- For empty list, both sides are 0
+  | cons _ _ => eq_refl                   -- For non-empty list, both sides simplify to same value
 
 /-!
 The theorem `tlLengthPred` states that the predecessor of the length of a list
@@ -801,7 +804,7 @@ def rev (l : NatList) : NatList :=
 theorem revLength : ∀ l : NatList, length (rev l) = length l := by
   intro l
   induction l
-  case nil => rfl
+  case nil => eq_refl
   case cons n l' ih => sorry -- We'll complete this proof later
 
 
@@ -846,7 +849,7 @@ theorem appNilR : ∀ l : NatList, l ++ [] = l := by
   induction l with
   | nil =>
     -- We need to show [] ++ [] = []
-    rfl -- This is true by definition of app
+    eq_refl -- This is true by definition of app
   | cons h t ih =>
     -- We need to show (h :: t) ++ [] = h :: t
     -- By definition of app, this is h :: (t ++ []) = h :: t
@@ -944,7 +947,7 @@ theorem eqblistRefl : ∀ l : NatList, eqblist l l = true := by
   induction l
   case nil =>
     unfold eqblist
-    rfl
+    eq_refl
   case cons h t ih =>
     unfold eqblist
     simp
@@ -993,9 +996,9 @@ tells us whether the requested element exists.
 -/
 
 -- Testing nthError with examples
-example : nthError (4 :: 5 :: 6 :: 7 :: []) 0 = NatOption.some 4 := by rfl
-example : nthError (4 :: 5 :: 6 :: 7 :: []) 3 = NatOption.some 7 := by rfl
-example : nthError (4 :: 5 :: 6 :: 7 :: []) 9 = NatOption.none := by rfl
+example : nthError (4 :: 5 :: 6 :: 7 :: []) 0 = NatOption.some 4 := by eq_refl
+example : nthError (4 :: 5 :: 6 :: 7 :: []) 3 = NatOption.some 7 := by eq_refl
+example : nthError (4 :: 5 :: 6 :: 7 :: []) 9 = NatOption.none := by eq_refl
 
 /-!
 Sometimes we still need to extract a value from an option, defaulting to some
@@ -1009,8 +1012,8 @@ def optionElim (d : Nat) (o : NatOption) : Nat :=
   | NatOption.none => d                -- If no value, return the default
 
 -- Testing optionElim with examples
-example : optionElim 0 (NatOption.some 4) = 4 := by rfl
-example : optionElim 0 NatOption.none = 0 := by rfl
+example : optionElim 0 (NatOption.some 4) = 4 := by eq_refl
+example : optionElim 0 NatOption.none = 0 := by eq_refl
 
 -- EXERCISE: 2 stars, standard (hd_error)
 -- Safe head function using options
@@ -1031,15 +1034,15 @@ def hdError (l : NatList) : NatOption :=
 
 example : hdError [] = NatOption.none := by
   -- Verify that hdError handles empty lists correctly
-  rfl -- If your implementation is correct, this should work
+  eq_refl -- If your implementation is correct, this should work
 
 example : hdError (1 :: []) = NatOption.some 1 := by
   -- Verify that hdError handles non-empty lists correctly
-  rfl -- If your implementation is correct, this should work
+  eq_refl -- If your implementation is correct, this should work
 
 example : hdError (5 :: 6 :: []) = NatOption.some 5 := by
   -- Another test for hdError
-  rfl -- If your implementation is correct, this should work
+  eq_refl -- If your implementation is correct, this should work
 
 /-!
 ## Partial Maps
