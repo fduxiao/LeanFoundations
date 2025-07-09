@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2025 Your Name. All rights reserved.
 Released under MIT license as described in the file LICENSE.
-Authors: Your Name
+Authors: Xiao Tan and Robert Joseph George
 
 This file introduces polymorphism and higher-order functions in Lean,
 with detailed explanations suitable for beginners.
@@ -52,6 +52,111 @@ focusing on parametric polymorphism - code that works identically for any type.
 -/
 
 /-!
+## Polymorphic Functions and Type Universe
+
+We first begin with a single case -- identity functions. For our `Nat` and `Bool`,
+obviously we have two identity functions, `idNat: Nat -> Nat := λ x => x` and
+`idBool: Bool -> Bool := λ x => x`. You can certainly define an identity function
+for each type, but the underlying logic are the same: we take the input and use it
+as the output. More explictly, we want to make a *polymorphic* identity function,
+which takes the desired type `A: Type` and yield a function of type `A -> A`.
+
+To make such a function, we introduce a type universe `Type`, which behaves like a
+type itself. This is to say, we add a parameter `A: Type` to `id`, then we want
+`id A: A -> A`.
+-/
+
+namespace scratch
+
+def id (A: Type) (x: A): A := x
+#check (id Nat)  -- should be Nat -> Nat
+#check (id Bool)  -- should be Bool -> Bool
+#eval (id Bool .true)  -- should be .true
+
+/-!
+### Functions Dependent on Types
+-/
+
+#check id
+
+/-!
+You may wonder what is the type of `id`. Certainly, you can try `#check id` and it
+will tell that the type of `id` is `(A: Type) -> A -> A`. This is a function type
+dependent on other types. Recall that `->` is right associative, so the above type
+is read as `(A: Type) -> (A -> A)`, i.e., you first feed some `(A: Type)` and then
+get a function of type `A -> A`. This type can also be written as
+`forall (A: Type), A -> A` as in [dependent type theory][rijke2022introduction].
+
+Caveat: `Type` is not a term of `Type`. In some other programming language, they
+model every thing as an `object`, and each object has a `class` or a `type`. The
+`type` is itself an `object`, whose type is again `type`. In Lean, this is not
+admitted, or otherwise you may trigger [Russell's paradox][coq1992paradox].
+For example, the following are invalid in Lean.
+
+```lean
+#check (Type: Type)
+#check ((A: Type) -> A -> A: Type)
+```
+
+But, do we have a type for `(A: Type) -> A -> A`?
+-/
+
+#check (A: Type) -> A -> A
+
+/-!
+You can find that `(A : Type) → A → A : Type 1`, i.e., Lean adopts a hierarchical
+type universe `Type 0: Type1`, `Type 1: Type 2` to avoid the paradox, and `Type`
+is just the abbreviation of `Type 0`.
+
+Besides, Lean provides a special universe called `Prop`, which is intended to capture
+all propositions. We consider `Prop: Type` and they are unified as `Sort`, i.e.
+`Prop := Sort 0`, `Type := Type 0 := Sort 1`, `Type 1 := Sort 2`, etc. The keyword
+`theorem` shows one way to define terms in `Prop`.
+
+To make the `id` available for all sorts, we put an `{}` after function names.
+We will discover more usages later.
+-/
+
+def id_for_all.{u} (A: Sort u) (x: A) := x
+
+/-!
+### Type Inference and Implicit Arguments
+
+The above `id` is exactly what we want, but a bit cumbersome. For example, if you
+know you want to apply the `id` to `Bool.true`, then it is unnecessary to always
+specify the `Bool` for `A` because the type `A` can be inferred from the term
+`x: A`. By default, Lean require all parameters to be fed. To hint Lean do the type
+inference, we use `{}` instead of `()` for the parameters.
+-/
+
+def id' {A: Type} (x: A): A := x
+#eval id' Bool.true
+
+/-!
+Now, we can apply `id'` to a term directly. However, we may still meet with the case
+that `id'` is needed for `Nat -> Nat`. To fill in an implicit argument, we use
+`(A := Nat)`.
+-/
+
+#check id' (A := Nat)  -- should be Nat -> Nat
+
+/-!
+Or, if you want the version with all arguments to be explicit, put an `@` before
+the function name.
+-/
+#check @id' Nat  -- should be Nat -> Nat
+
+/-!
+You can also specify some parameters (partially apply) with the `(param := term)` syntax.
+-/
+#check @id' (A := Nat)  -- should be Nat -> Nat
+#eval id (A := Nat) (x := .zero)  -- should be .zero
+
+
+end scratch
+
+
+/-!
 ## Polymorphic Types
 
 In previous chapters, we worked with lists containing only natural numbers (NatList).
@@ -90,6 +195,8 @@ inductive MyList (α : Type) : Type where
 deriving Repr
 
 /-!
+> To type the `α`, type `\alpha` in vscode.
+
 Let's break down what's happening here:
 
 1. `α` is a **type parameter** - a placeholder for any concrete type
@@ -205,9 +312,8 @@ determined from the other arguments.
 For example, in `myRepeat Nat 5 3`, the type parameter `Nat` could be inferred
 from the fact that `5` has type `Nat`.
 
-Lean allows us to mark type parameters as **implicit** by wrapping them in
-curly braces. When a parameter is implicit, Lean will try to figure out its
-value from context.
+Again, we use the **implicit** arguments by wrapping them in curly braces and
+Lean will try to figure out their values from context.
 -/
 
 -- Repeat with implicit type parameter
