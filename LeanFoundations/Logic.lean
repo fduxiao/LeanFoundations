@@ -9,6 +9,7 @@ import LeanFoundations.Logic.Basic
 import LeanFoundations.Logic.Induction
 import LeanFoundations.Logic.Lists
 import LeanFoundations.Logic.Polymorphism
+import LeanFoundations.Logic.PropLogic
 
 
 /-TOC-/
@@ -18,7 +19,6 @@ import LeanFoundations.Logic.Polymorphism
 - `LeanFoundations.Logic.Induction`: Proof by induction
 - `LeanFoundations.Logic.Lists`: Structured data
 - `LeanFoundations.Logic.Polymorphism`: Polymorphism
-- Tactics and logics: I tend to merge them together becasue tactics are specific to logics
 - Inductively defined propositions
 - Curry-Howard correspondence.
 - Inductive principles
@@ -26,5 +26,6 @@ import LeanFoundations.Logic.Polymorphism
 - Make a small DSL for arithmetic and compile it to a stack calculator
 - Monad and IO and generate some json representing the stack calculator
 - Meta-programming: notation, syntax, macro, elaborations.
+- `LeanFoundations.Logic.PropLogic`: Propositional Logic
 - Make our own tactics
 -/
