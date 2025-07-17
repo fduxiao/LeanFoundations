@@ -309,6 +309,8 @@ This reflects how we intuitively build up lists: we either have nothing (the emp
 or we take an existing list and add an element to the front.
 -/
 
+namespace NatList
+
 inductive NatList : Type
   | nil  : NatList                    -- The empty list
   | cons : Nat → NatList → NatList    -- A natural number followed by a list
@@ -339,12 +341,15 @@ for working with lists.
 -/
 
 -- Infix operator for cons (adds an element to the front of a list)
-infixr:67 " :: " => NatList.cons
+scoped infixr:67 " :: " => NatList.cons
 
 -- Empty list notation
-notation "[]" => NatList.nil
+scoped notation "[]" => NatList.nil
 
 /-!
+> The `scoped` prefix indicates that the new notation is only available in current
+> namespace.
+
 The `infixr:67 " :: " => NatList.cons` declaration defines a right-associative
 infix operator `::` with precedence 67 that represents the `cons` constructor.
 This lets us write `1 :: l` instead of `NatList.cons 1 l`.
@@ -1185,6 +1190,8 @@ theorem updateEq : ∀ (d : PartialMap) (x : Identifier) (v : Nat),
 -- EXERCISE: 1 star, standard (update_neq)
 theorem updateNeq : ∀ (d : PartialMap) (x y : Identifier) (o : Nat),
     eqbId x y = false → find x (update d y o) = find x d := sorry
+
+end NatList
 
 /-!
 ## Summary

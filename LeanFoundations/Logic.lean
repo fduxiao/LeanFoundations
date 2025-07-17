@@ -7,8 +7,8 @@ Authors: Xiao Tan
 
 import LeanFoundations.Logic.Basic
 import LeanFoundations.Logic.Induction
--- import LeanFoundations.Logic.Lists
--- import LeanFoundations.Logic.Polymorphism
+import LeanFoundations.Logic.Lists
+import LeanFoundations.Logic.Polymorphism
 
 
 /-TOC-/
