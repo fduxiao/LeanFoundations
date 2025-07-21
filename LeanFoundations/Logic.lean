@@ -2,13 +2,13 @@
 Copyright (c) 2025 Xiao Tan. All rights reserved.
 Released under MIT license as described in the file LICENSE.
 Authors: Xiao Tan
-
 -/
 
 import LeanFoundations.Logic.Basic
 import LeanFoundations.Logic.Induction
 import LeanFoundations.Logic.Lists
 import LeanFoundations.Logic.Polymorphism
+import LeanFoundations.Logic.Tactics
 import LeanFoundations.Logic.PropLogic
 
 
@@ -19,6 +19,7 @@ import LeanFoundations.Logic.PropLogic
 - `LeanFoundations.Logic.Induction`: Proof by induction
 - `LeanFoundations.Logic.Lists`: Structured data
 - `LeanFoundations.Logic.Polymorphism`: Polymorphism
+- `LeanFoundations.Logic.Tactics`: More basic tactics
 - Inductively defined propositions
 - Curry-Howard correspondence.
 - Inductive principles
