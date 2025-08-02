@@ -7,17 +7,17 @@ Authors: Xiao Tan
 
 /-!
 # More Basic Tactics
-We are going to lean more tactics. We first inspect more on the *implicational*
-propositions. Then, we move to how to prove and make use of conjuction and disjuncitons.
-Then, we discuss the injection and discrimination on inductive types. Finally,
-we look at tactics on hypothesis and unfolding.
+We are going to lean more tactics. We first inspect more on the *implications*.
+Then, we move to how to prove and make use of conjuction and disjuncitons. Then,
+we discuss the injection and discrimination on inductive types. Finally,
+we look at tactics on hypothesis and unfolding, and other useful tactics.
 -/
 
 /-!
-## Implicational propositions and Tactic Apply
-We first look at the *implicational* propositions. Recall that in Lean, we prove
+## Implications and Tactic Apply
+We first look at the *implications*. Recall that in Lean, we prove
 things by [fulfilling the goal under certain *context*](LeanFoundations.Logic.Basic.html#Proofs).
-Basically, an *implicational* proposition means a proposition with a condition, i.e.,
+Basically, an *implication* means a proposition with a condition, i.e.,
 a proposition of the form *if `A` then `B`*, written as `A -> B` in Lean. We call
 `A` the antecedent (condition) and `B` the consequent (conclusion) of `A -> B`.
 As we learned before, to prove such a `theorem` in Lean, we `intro` the
@@ -204,7 +204,7 @@ example:
 
 
 /-!
-## Conjuction and Disjunction
+## Conjuctions and Disjunctions
 -/
 
 /-!
@@ -216,7 +216,7 @@ example:
 -/
 
 /-!
-## Existential Quantifiers
+## Existential Quantification
 -/
 
 /-!
