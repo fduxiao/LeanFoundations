@@ -204,6 +204,70 @@ example:
 
 
 /-!
+### Proofs inside Proofs
+As you may imagine, we may have a very complicated implicational proof. For
+example, `A -> (A -> B) -> (B -> C) -> (B -> D) -> (B -> C -> D -> E) -> E`.
+Certainly, you can prove it just with `apply` and `intro`.
+-/
+
+example (A B C D E: Prop):
+  A ->
+  (A -> B) ->
+  (B -> C) ->
+  (B -> D) ->
+  (B -> C -> D -> E) ->
+  E
+:= by
+  intro Ha Hab Hbc Hbd Hbcde
+  apply Hbcde
+  . -- B
+    apply Hab
+    exact Ha
+  . -- C
+    apply Hbc
+    apply Hab
+    exact Ha
+  . -- D
+    apply Hbd
+    apply Hab
+    apply Ha
+
+
+/-!
+The thing is that the proof of `B` is repeated may times. We want to `have`
+the proof of `B` during the whole proof. Lean provides two syntactic sugars
+for that, one is `have`, which allows you prove some facts inside a large
+proof. The other is `let`, this is a bit like `giving a name to some term`.
+Both will introduce corresponding terms into the context and you can then
+make use of them.
+-/
+
+example (A B C D E: Prop):
+  A ->
+  (A -> B) ->
+  (B -> C) ->
+  (B -> D) ->
+  (B -> C -> D -> E) ->
+  E
+:= by
+  intro Ha Hab Hbc Hbd Hbcde
+  have Hb: B := by
+    apply Hab
+    exact Ha
+  -- Now, you can see a new entry `Hb: B` in the context.
+  let Hb' := Hab Ha -- Similarly, this will add `Hb': B`
+
+  -- You can use it as an ordinary variable.
+  apply Hbcde Hb
+  . -- C
+    apply Hbc
+    exact Hb
+  . -- D
+    apply Hbd
+    exact Hb
+
+
+/-!
 ## Conjuctions and Disjunctions
 -/
 
