@@ -89,6 +89,12 @@ proposition `1 = 2 -> (1 = 2 -> 3 = 4) -> 3 = 4`. This is exactly of the form
 #check (ModusPones (A := 1 = 2) (B := 3 = 4))
 
 /-!
+Or, you can omit the names and Lean will fill in the parameters in order.
+-/
+#check (ModusPones (A := 1 = 2) (3 = 4))
+#check (ModusPones (1 = 2) (3 = 4))
+
+/-!
 Thus, to prove the proposition, we first `intro` `H1: 1 = 2` and `H2: 3 = 4`,
 and apply `(ModusPones (A := 1 = 2) (B := 3 = 4))`. This time, since we have
 two *conditions*, after the application, we will have two goals. We use
@@ -269,11 +275,148 @@ example (A B C D E: Prop):
 
 /-!
 ## Conjuctions and Disjunctions
+Our next target is conjuctions (and) and disjunctions (or). From the previous
+section, we can find that to make an *implication*, we first `intro` its antecedent
+into the context and prove the consequent; if we want to make use of it, we
+`apply` it and prove the antecedent. This shows the general principles of
+dealing with logical connectives:
+- Introduction rule: given two propositions, how to make a new proposition from
+  the connective.
+- Construction rule: in order to prove a proposition made of this connective, what
+  tactics we shall use.
+- Elimination rule: given such a proposition, how to use it to prove other things,
+  i.e., how to remove the connective to get new proofs.
+-/
+
+/-!
+### Conjuction
+Here, we use `And(∧)` as an example to explain that. Sometimes, we may want to
+prove talk about two facts, e.g., `1 = 1 ∧ 2 = 2`. Two propositions `1 = 1` and
+`2 = 2` are connected by an `∧`. Or equivalently, you can use `And (1 = 1) (2 = 2)`.
+This shows us the *introduction rule*: `And` takes two propositions and yields
+another. You can think of that as a function of type `Prop -> Prop -> Prop`.
+-/
+#check And  -- And (a b : Prop) : Prop
+
+/-!
+Then, we ask how to prove `1 = 1 ∧ 2 = 2`. Intuitively, to prove an `And` of
+`A` and `B`, we have to prove both `A` and `B`. This is the *construction
+rule*, which can be considered as a function of type `A -> B -> A ∧ B`.
+Lean provides a term `And.intro` for it, and it is called the *constructor*.
+-/
+
+#check And.intro
+
+/-!
+Then, we can simply use `apply And.intro` to change our goals to `A` and
+`B` and prove them respectively.
+
+> Hint: use `.` to separate different proofs of different goals as before.
+-/
+
+example: 1 = 1 ∧ 2 = 2 := by
+  apply And.intro
+  . eq_refl
+  . eq_refl
+
+
+/-!
+If you don't remember the exact name of the constructor, Lean also provides
+a tactics called `constructor`, which will try all available constructors to
+fulfill the goal.
+-/
+
+example: 1 = 1 ∧ 2 = 2 := by
+  constructor
+  . eq_refl
+  . eq_refl
+
+
+/-!
+As you may have thought, we next deal with the elimination rule, i.e., how
+to make prove out of a conjunction. The answer is quite simple: given
+`c: A ∧ B`, we naturally have `c.left: A` and `c.right: B`. They are called
+*projections*.
+
+> The real eliminators are the *inductive principles* of types. We will talk
+> about them later.
+-/
+
+#check And.left  -- ∀ {a b : Prop}, a ∧ b → a
+#check And.right  -- ∀ {a b : Prop}, a ∧ b → b
+
+
+example: 1 = 2 ∧ 2 = 2 -> 1 = 2 := by
+  intro c
+  exact c.left
+
+/-!
+You may wonder why we need the conjunctions, since they seems to be a syntactic
+sugar to organize two facts. The answer is that sometimes we need to express
+complicated things in a proof.
+
+> Note that `∧` is prior to `->`.
+-/
+
+example (A B C: Prop): (A -> B ∧ C) -> (A -> B) ∧ (A -> C) := by
+  intros c
+  constructor  -- split the goals
+  . -- A -> B
+    intros a
+    exact (c a).left
+  . -- A -> C
+    intros a
+    exact (c a).right
+
+
+/-!
+### Exercises
+-/
+
+example (A B C: Prop): (A -> B) ∧ (A -> C) -> (A -> B ∧ C) := by
+  admit
+
+example (A B C: Prop): (A -> B -> C) -> (A ∧ B -> C) := by
+  admit
+
+example (A B C: Prop): (A ∧ B -> C) -> (A -> B -> C) := by
+  admit
+
+/-!
+### If and Only If
+-/
+
+/-!
+### Disjuction
+-/
+
+
+/-!
+elimination rule of `∨`: forall {A B C}, (A -> C) -> (B -> C) -> (A ∨ B -> C)
 -/
 
 /-!
 ## Injection and Discrimination
+
+Recall the definition of Nat
+```lean
+inductive Nat where
+  | zero | succ
+```
 -/
+
+namespace scratch
+
+theorem Nat.succ_inj {a b: Nat}: a.succ = b.succ -> a = b := by
+  intro H1
+  have H2: a = a.succ.pred := by
+    eq_refl
+  rewrite [H2]
+  rewrite [H1]
+  eq_refl
+
+end scratch
+
 
 /-!
 ## Falsehood and Negation
