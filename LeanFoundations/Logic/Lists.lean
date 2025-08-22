@@ -1192,27 +1192,3 @@ theorem updateNeq : ∀ (d : PartialMap) (x y : Identifier) (o : Nat),
     eqbId x y = false → find x (update d y o) = find x d := sorry
 
 end NatList
-
-/-!
-## Summary
-
-In this chapter, we've learned how to:
-1. Define and work with structured data types (pairs, lists)
-2. Use pattern matching to extract components
-3. Prove properties about these structures using induction
-4. Handle edge cases with option types
-5. Build more complex data structures (bags, partial maps)
-
-These concepts form the foundation for working with more sophisticated
-data structures and algorithms in Lean 4.
-
-Key takeaways:
-- Inductive types let us define custom data structures with exactly the properties we need
-- Pattern matching is a powerful way to work with structured data
-- Induction is essential for proving properties of recursive structures
-- Option types help us handle situations where a value might not exist
-- Simple data structures can be composed to create more complex ones
-
-With these tools, you can now implement and reason about a wide variety of data
-structures and algorithms in Lean 4.
--/

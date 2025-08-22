@@ -25,6 +25,8 @@ the former, using `none` as the default element.
 
 ## The Lean Standard Library
 
+One small digression before we begin...
+
 Unlike the chapters we have seen so far, this one does not import the chapter before it
 (nor, transitively, all the earlier chapters). Instead, in this chapter and from now on,
 we're going to import the definitions and theorems we need directly from Lean's standard
@@ -51,6 +53,8 @@ at the documentation. For example, where is the natural addition operation defin
 #print Nat.add
 
 /-!
+We'll see some more uses of `#check` and `#print` in later chapters.
+
 ## Identifiers
 
 First, we need a type for the keys that we will use to index into our maps. In Lists
@@ -61,7 +65,7 @@ To compare strings, we use the function `String.beq` (or the `==` operator) from
 standard library.
 -/
 
--- In Lean 4, string equality is decidable and we have these properties:
+-- In Lean 4, string equality properties:
 example (a : String) : (a == a) = true := by simp
 
 /-!
@@ -91,7 +95,7 @@ We build up to partial maps in two steps. First, we define a type of total maps 
 return a default value when we look up a key that is not present in the map.
 -/
 
-def TotalMap (A : Type) := String → A
+def total_map (A : Type) := String → A
 
 /-!
 Intuitively, a total map over an element type `A` is just a function that can be used
@@ -101,7 +105,7 @@ The function `t_empty` yields an empty total map, given a default element; this 
 always returns the default element when applied to any string.
 -/
 
-def t_empty {A : Type} (v : A) : TotalMap A :=
+def t_empty {A : Type} (v : A) : total_map A :=
   fun _ => v
 
 /-!
@@ -111,7 +115,7 @@ whatever `m` does. The novelty here is that we achieve this effect by wrapping a
 function around the old one.
 -/
 
-def t_update {A : Type} (m : TotalMap A) (x : String) (v : A) : TotalMap A :=
+def t_update {A : Type} (m : total_map A) (x : String) (v : A) : total_map A :=
   fun x' => if x == x' then v else m x'
 
 /-!
@@ -122,7 +126,7 @@ For example, we can build a map taking strings to bools, where "foo" and "bar" a
 to true and every other key is mapped to false, like this:
 -/
 
-def examplemap : TotalMap Bool :=
+def examplemap : total_map Bool :=
   t_update (t_update (t_empty false) "foo" true) "bar" true
 
 /-!
@@ -133,7 +137,7 @@ First, we use the following notation to represent an empty total map with a defa
 
 notation "{ " "!->" v " }" => t_empty v
 
-example : TotalMap Bool := { !-> false }
+example : total_map Bool := { !-> false }
 
 /-!
 We next introduce a convenient notation for extending an existing map with a new binding.
@@ -145,7 +149,7 @@ notation x " !-> " v " ; " m => t_update m x v
 The `examplemap` above can now be defined as follows:
 -/
 
-def examplemap' : TotalMap Bool :=
+def examplemap' : total_map Bool :=
   "bar" !-> true ; "foo" !-> true ; { !-> false }
 
 /-!
@@ -166,7 +170,8 @@ First, the empty map returns its default element for all keys:
 -/
 
 theorem t_apply_empty (A : Type) (x : String) (v : A) :
-  ({ !-> v } : TotalMap A) x = v := rfl
+  ({ !-> v } : total_map A) x = v := by
+  rfl
 
 /-!
 ### Exercise: 2 stars, standard, optional (t_update_eq)
@@ -175,8 +180,9 @@ Next, if we update a map `m` at a key `x` with a new value `v` and then look up 
 the map resulting from the update, we get back `v`:
 -/
 
-theorem t_update_eq (A : Type) (m : TotalMap A) (x : String) (v : A) :
-  (x !-> v ; m) x = v := by simp [t_update]
+theorem t_update_eq (A : Type) (m : total_map A) (x : String) (v : A) :
+  (x !-> v ; m) x = v := by
+  simp [t_update]
 
 /-!
 ### Exercise: 2 stars, standard, optional (t_update_neq)
@@ -185,9 +191,10 @@ On the other hand, if we update a map `m` at a key `x1` and then look up a diffe
 `x2` in the resulting map, we get the same result that `m` would have given:
 -/
 
-theorem t_update_neq (A : Type) (m : TotalMap A) (x1 x2 : String) (v : A) :
+theorem t_update_neq (A : Type) (m : total_map A) (x1 x2 : String) (v : A) :
   x1 ≠ x2 →
-  (x1 !-> v ; m) x2 = m x2 := by sorry
+  (x1 !-> v ; m) x2 = m x2 := by
+  sorry
 
 /-!
 ### Exercise: 2 stars, standard, optional (t_update_shadow)
@@ -197,8 +204,9 @@ key `x` and another value `v2`, the resulting map behaves the same (gives the sa
 when applied to any key) as the simpler map obtained by performing just the second update on `m`:
 -/
 
-theorem t_update_shadow (A : Type) (m : TotalMap A) (x : String) (v1 v2 : A) :
-  (x !-> v2 ; x !-> v1 ; m) = (x !-> v2 ; m) := by sorry
+theorem t_update_shadow (A : Type) (m : total_map A) (x : String) (v1 v2 : A) :
+  (x !-> v2 ; x !-> v1 ; m) = (x !-> v2 ; m) := by
+  sorry
 
 /-!
 ### Exercise: 2 stars, standard (t_update_same)
@@ -210,8 +218,9 @@ theorem, which states that if we update a map to assign key `x` the same value a
 has in `m`, then the result is equal to `m`:
 -/
 
-theorem t_update_same (A : Type) (m : TotalMap A) (x : String) :
-  (x !-> m x ; m) = m := by sorry
+theorem t_update_same (A : Type) (m : total_map A) (x : String) :
+  (x !-> m x ; m) = m := by
+  sorry
 
 /-!
 ### Exercise: 3 stars, standard, especially useful (t_update_permute)
@@ -220,9 +229,10 @@ Similarly, use `by_cases` to prove one final property of the update function: If
 a map `m` at two distinct keys, it doesn't matter in which order we do the updates.
 -/
 
-theorem t_update_permute (A : Type) (m : TotalMap A) (v1 v2 : A) (x1 x2 : String) :
+theorem t_update_permute (A : Type) (m : total_map A) (v1 v2 : A) (x1 x2 : String) :
   x2 ≠ x1 →
-  (x1 !-> v1 ; x2 !-> v2 ; m) = (x2 !-> v2 ; x1 !-> v1 ; m) := by sorry
+  (x1 !-> v1 ; x2 !-> v2 ; m) = (x2 !-> v2 ; x1 !-> v1 ; m) := by
+  sorry
 
 /-!
 ## Partial Maps
@@ -231,12 +241,12 @@ Lastly, we define partial maps on top of total maps. A partial map with elements
 is simply a total map with elements of type `Option A` and default element `none`.
 -/
 
-def PartialMap (A : Type) := TotalMap (Option A)
+def partial_map (A : Type) := total_map (Option A)
 
-def empty {A : Type} : PartialMap A :=
+def empty {A : Type} : partial_map A :=
   { !-> none }
 
-def update {A : Type} (m : PartialMap A) (x : String) (v : A) : PartialMap A :=
+def update {A : Type} (m : partial_map A) (x : String) (v : A) : partial_map A :=
   x !-> some v ; m
 
 /-!
@@ -251,7 +261,7 @@ We can also hide the last case when it is empty.
 
 notation x " ⊢> " v => update empty x v
 
-def examplepmap : PartialMap Bool :=
+def examplepmap : partial_map Bool :=
   "Church" ⊢> true ; "Turing" ⊢> false ; empty
 
 /-!
@@ -259,49 +269,63 @@ We now straightforwardly lift all of the basic lemmas about total maps to partia
 -/
 
 theorem apply_empty (A : Type) (x : String) :
-  (empty : PartialMap A) x = none := rfl
+  (empty : partial_map A) x = none := by
+  rfl
 
-theorem update_eq (A : Type) (m : PartialMap A) (x : String) (v : A) :
+theorem update_eq (A : Type) (m : partial_map A) (x : String) (v : A) :
   (x ⊢> v ; m) x = some v := by
   simp [update]
   apply t_update_eq
 
 /-!
-The `update_eq` lemma is used very often in proofs. We can add it as a simp lemma.
+The `update_eq` lemma is used very often in proofs. Adding it to Lean's global "hint database"
+allows proof-automation tactics such as `simp` to find it.
 -/
 
--- attribute [simp] update_eq
+attribute [simp] update_eq
 
-theorem update_neq (A : Type) (m : PartialMap A) (x1 x2 : String) (v : A) :
+theorem update_neq (A : Type) (m : partial_map A) (x1 x2 : String) (v : A) :
   x2 ≠ x1 →
-  (x2 ⊢> v ; m) x1 = m x1 := by sorry
+  (x2 ⊢> v ; m) x1 = m x1 := by
+  intro h
+  simp [update]
+  apply t_update_neq
+  exact h
 
-theorem update_shadow (A : Type) (m : PartialMap A) (x : String) (v1 v2 : A) :
-  (x ⊢> v2 ; x ⊢> v1 ; m) = (x ⊢> v2 ; m) := by sorry
+theorem update_shadow (A : Type) (m : partial_map A) (x : String) (v1 v2 : A) :
+  (x ⊢> v2 ; x ⊢> v1 ; m) = (x ⊢> v2 ; m) := by
+  simp [update]
+  apply t_update_shadow
 
-theorem update_same (A : Type) (m : PartialMap A) (x : String) (v : A) :
+theorem update_same (A : Type) (m : partial_map A) (x : String) (v : A) :
   m x = some v →
-  (x ⊢> v ; m) = m := by sorry
+  (x ⊢> v ; m) = m := by
+  sorry
 
-theorem update_permute (A : Type) (m : PartialMap A) (x1 x2 : String) (v1 v2 : A) :
+theorem update_permute (A : Type) (m : partial_map A) (x1 x2 : String) (v1 v2 : A) :
   x2 ≠ x1 →
-  (x1 ⊢> v1 ; x2 ⊢> v2 ; m) = (x2 ⊢> v2 ; x1 ⊢> v1 ; m) := by sorry
+  (x1 ⊢> v1 ; x2 ⊢> v2 ; m) = (x2 ⊢> v2 ; x1 ⊢> v1 ; m) := by
+  intro h
+  simp [update]
+  apply t_update_permute
+  exact h
 
 /-!
 One last thing: For partial maps, it's convenient to introduce a notion of map inclusion,
 stating that all the entries in one map are also present in another:
 -/
 
-def includedin {A : Type} (m m' : PartialMap A) : Prop :=
+def includedin {A : Type} (m m' : partial_map A) : Prop :=
   ∀ x v, m x = some v → m' x = some v
 
 /-!
 We can then show that map update preserves map inclusion -- that is:
 -/
 
-theorem includedin_update (A : Type) (m m' : PartialMap A) (x : String) (vx : A) :
+theorem includedin_update (A : Type) (m m' : partial_map A) (x : String) (vx : A) :
   includedin m m' →
-  includedin (x ⊢> vx ; m) (x ⊢> vx ; m') := by sorry
+  includedin (x ⊢> vx ; m) (x ⊢> vx ; m') := by
+  sorry
 
 /-!
 This property is quite useful for reasoning about languages with variable binding -- e.g.,
@@ -319,7 +343,7 @@ Let's prove a few more useful properties of maps that will come in handy later.
 Map inclusion is reflexive:
 -/
 
-theorem includedin_refl (A : Type) (m : PartialMap A) :
+theorem includedin_refl (A : Type) (m : partial_map A) :
   includedin m m := by
   intro x v h
   exact h
@@ -330,7 +354,7 @@ theorem includedin_refl (A : Type) (m : PartialMap A) :
 Map inclusion is transitive:
 -/
 
-theorem includedin_trans (A : Type) (m1 m2 m3 : PartialMap A) :
+theorem includedin_trans (A : Type) (m1 m2 m3 : partial_map A) :
   includedin m1 m2 → includedin m2 m3 → includedin m1 m3 := by
   intro h12 h23
   intro x v h1
@@ -344,8 +368,10 @@ theorem includedin_trans (A : Type) (m1 m2 m3 : PartialMap A) :
 The empty map is included in every map:
 -/
 
-theorem includedin_empty (A : Type) (m : PartialMap A) :
-  includedin empty m := by sorry
+theorem includedin_empty (A : Type) (m : partial_map A) :
+  includedin empty m := by
+  intro x v h
+  simp [empty, t_empty] at h
 
 /-!
 ### Exercise: 3 stars, standard (includedin_update_same)
@@ -353,10 +379,11 @@ theorem includedin_empty (A : Type) (m : PartialMap A) :
 If we update a map with a binding that's already present, inclusion is preserved:
 -/
 
-theorem includedin_update_same (A : Type) (m m' : PartialMap A) (x : String) (v : A) :
+theorem includedin_update_same (A : Type) (m m' : partial_map A) (x : String) (v : A) :
   includedin m m' →
   m' x = some v →
-  includedin (x ⊢> v ; m) m' := by sorry
+  includedin (x ⊢> v ; m) m' := by
+  sorry
 
 /-!
 ## Examples and Tests
@@ -381,40 +408,3 @@ example : examplepmap "Turing" = some false := by
 
 example : examplepmap "Godel" = none := by
   simp [examplepmap, update, t_update, empty, t_empty]
-
-/-!
-## Summary
-
-In this chapter, we've seen how to:
-
-1. **Define total maps** as functions from strings to values, with a default value for missing keys
-2. **Define partial maps** as total maps returning `Option` types
-3. **Use higher-order functions** to implement map operations like update
-4. **Prove fundamental properties** of maps using functional extensionality
-5. **Work with map inclusion** as a useful relation between partial maps
-
-The functional representation of maps offers several advantages:
-- **Extensionality**: Maps that behave the same are definitionally equal
-- **Simplicity**: No need for separate lookup operations - just function application
-- **Compositionality**: Easy to build complex maps from simple operations
-
-These maps will be essential tools in later chapters when we formalize programming languages
-and their semantics.
-
-## Exercises for the Reader
-
-The following theorems are left as exercises. Try to prove them using the techniques
-demonstrated in this chapter:
-
-1. `t_update_neq`: Updating a map at one key doesn't affect lookups at different keys
-2. `t_update_shadow`: Double updates with the same key shadow the first update
-3. `t_update_same`: Updating with the same value is the identity
-4. `t_update_permute`: Order of updates at different keys doesn't matter
-5. `update_neq`, `update_shadow`, `update_same`, `update_permute`: Partial map versions
-6. `includedin_update`: Map inclusion is preserved by consistent updates
-7. `includedin_empty`: The empty map is included in all maps
-8. `includedin_update_same`: Updating with existing bindings preserves inclusion
-
-These exercises will help you understand the fundamental properties of functional maps
-and prepare you for more advanced topics in programming language theory.
--/

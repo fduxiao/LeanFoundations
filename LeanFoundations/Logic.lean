@@ -10,6 +10,14 @@ import LeanFoundations.Logic.Lists
 import LeanFoundations.Logic.Polymorphism
 import LeanFoundations.Logic.Tactics
 import LeanFoundations.Logic.PropLogic
+import LeanFoundations.Logic.IndProp
+import LeanFoundations.Logic.Maps
+import LeanFoundations.Logic.ProofObjects
+import LeanFoundations.Logic.IndPrinciples
+import LeanFoundations.Logic.Rel
+import LeanFoundations.Logic.Imp
+import LeanFoundations.Logic.ImpParser
+import LeanFoundations.Logic.ImpCEvalFun
 
 
 /-TOC-/
@@ -20,13 +28,17 @@ import LeanFoundations.Logic.PropLogic
 - `LeanFoundations.Logic.Lists`: Structured data
 - `LeanFoundations.Logic.Polymorphism`: Polymorphism
 - `LeanFoundations.Logic.Tactics`: More basic tactics
-- Inductively defined propositions
-- Curry-Howard correspondence.
-- Inductive principles
-- Relations and typeclasses
+- `LeanFoundations.Logic.PropLogic`: Propositional Logic
+- `LeanFoundations.Logic.IndProp`: Inductively defined propositions
+- `LeanFoundations.Logic.Maps`: Total and partial maps
+- `LeanFoundations.Logic.ProofObjects`: The Curry-Howard correspondence
+- `LeanFoundations.Logic.IndPrinciples`: Induction principles
+- `LeanFoundations.Logic.Rel`: Relations and their properties
+- `LeanFoundations.Logic.Imp`: Simple imperative programs
+- `LeanFoundations.Logic.ImpParser`: Lexing and parsing in Lean
+- `LeanFoundations.Logic.ImpCEvalFun`: Evaluation function for Imp
 - Make a small DSL for arithmetic and compile it to a stack calculator
 - Monad and IO and generate some json representing the stack calculator
 - Meta-programming: notation, syntax, macro, elaborations.
-- `LeanFoundations.Logic.PropLogic`: Propositional Logic
 - Make our own tactics
 -/

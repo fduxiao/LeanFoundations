@@ -1230,31 +1230,3 @@ def bin_to_nat (b : Bin) : Nat :=
   | .B1 b' => Nat.succ (Nat.add (bin_to_nat b') (bin_to_nat b'))
 
 end scratch
-
-/-!
-## Testing Your Solutions
-
-Each exercise comes with test cases that you can use to verify your solutions.
-For example, for the nandb function:
-
-example: (Bool.nand .true .false) = .true := by
-  sorry
-
-example: (Bool.nand .false .false) = .true := by
-  sorry
-
-example: (Bool.nand .false .true) = .true := by
-  sorry
-
-example: (Bool.nand .true .true) = .false := by
-  sorry
-
-Try to prove these test cases after implementing the functions!
-
-Tips for testing:
-1. Start with simple cases
-2. Test edge cases
-3. Test with different combinations of inputs
-4. Use the test cases to guide your implementation
-5. Make sure your implementation matches the test cases
--/
