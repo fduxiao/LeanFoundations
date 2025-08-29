@@ -14,6 +14,7 @@ import LeanFoundations.Logic.IndProp
 import LeanFoundations.Logic.Maps
 import LeanFoundations.Logic.ProofObjects
 import LeanFoundations.Logic.IndPrinciples
+import LeanFoundations.Logic.Typeclass
 import LeanFoundations.Logic.Rel
 import LeanFoundations.Logic.Imp
 import LeanFoundations.Logic.ImpParser
@@ -33,6 +34,7 @@ import LeanFoundations.Logic.ImpCEvalFun
 - `LeanFoundations.Logic.Maps`: Total and partial maps
 - `LeanFoundations.Logic.ProofObjects`: The Curry-Howard correspondence
 - `LeanFoundations.Logic.IndPrinciples`: Induction principles
+- `LeanFoundations.Logic.Typeclass`: Syntactic sugar to describe common behavior
 - `LeanFoundations.Logic.Rel`: Relations and their properties
 - `LeanFoundations.Logic.Imp`: Simple imperative programs
 - `LeanFoundations.Logic.ImpParser`: Lexing and parsing in Lean

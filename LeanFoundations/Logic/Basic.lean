@@ -1097,6 +1097,33 @@ example: forall b: Bool, b.not.not.not.not = b := by
   rewrite [Bool.not_not]
   eq_refl
 
+
+/-!
+### Symmetry
+A direct result of the rewrite tactic is the symmetry of equality.
+-/
+example: forall m n: Nat, m = n -> n = m := by
+  intro m n H
+  rewrite [H]
+  eq_refl
+
+/-!
+This shows that to prove `n = m`, you can change the goal to `m = n`.
+Lean provides a tactic `symm` for this purpose.
+-/
+example: 3 = 4 -> 4 = 3 := by
+  intro H
+  symm
+  exact H
+
+/-!
+And it can also be used to switch the sides of an equality
+-/
+example: 3 = 4 -> 4 = 3 := by
+  intro H
+  symm at H  -- This changes 3 = 4 to 4 = 3
+  exact H
+
 end scratch
 
 /-!
