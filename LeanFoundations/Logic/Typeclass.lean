@@ -50,7 +50,7 @@ example (U: Type) (e: U) (op: U -> U -> U):
 /-!
 This works well, but the problem is that you have to always repeat all
 the necessary axioms. As in the previous chapters, propositions are just
-objects, so we can `struct` them together.
+objects, so we can `structure` them together.
 -/
 
 
@@ -123,7 +123,7 @@ arguments? This requires two things:
 2. How Lean find the corresponding `NatMonoid: Monoid Nat`.
 
 Lean provides a mechanism for this purpose called _typeclass_. Instead of
-the `struct`, we use the keyword `class` to tell Lean that we hope to use
+the `structure`, we use the keyword `class` to tell Lean that we hope to use
 it implicitly, and correspondingly, we use `instance` instead of `def` to
 define a term of this type and Lean will search for it when an instance
 is needed. As you may imagine, their behaviors are exactly the same as the
@@ -271,12 +271,294 @@ instance: IsMonoid Bool where
 
 /-!
 ## Operator Reloading
+You may want to ask why we need typeclasses. If we have more than one
+instance, then they just behave as normal types. If we only have one instance,
+why do we have to save it? One benefit of typeclass is operator reloading.
+We have seen that for natural numbers, we can use `+` instead of `.add` to
+write long expressions. This `+` is such a _common behavior_ described by
+typeclass.
+
+We give the example of type `Bool`. We consider `Bool.xor` as the _addition_
+of `Bool`, (which can be thought as $\mathbb{F}_2$). If you try `true + true`
+in Lean, it will complain that it is illegal. This is because `+` is not
+defined for `Bool`, and to tell Lean we want to add two terms for some type,
+we fulfill the `Add` instance.
+-/
+
+instance: Add Bool where
+  add := Bool.xor
+
+
+/-!
+And now, you can add true and false.
+-/
+#eval true + false
+
+/-!
+Similarly, we can define substraction, multiplication and division.
+-/
+instance: Sub Bool where
+  sub := Bool.xor
+
+#eval true - false
+
+instance: Mul Bool where
+  mul := Bool.and
+
+#eval true * false
+
+-- We don't have a good definition for `/0`.
+instance: Div Bool where
+  div a b := if b == false then b else a
+
+/-!
+Besides, we also want to use `0`, `1` for `false` and `true`. In other words,
+Lean interprets number literals as _nullary_ functions, or you can think of
+the interpretation as a function `Nat -> Bool`. Depending on your need, this
+interpretation function can be a partial one, e.g., you may only want to
+define `0` as `false` and `1` as `true`. Thus, the interpretation of number
+literals is describled by the following typeclass.
+```lean
+class OfNat (A : Type) (n : Nat) where
+  ofNat : A
+```
+If you want to interpret `0`, you just _instantialize_ `OfNat A 0`, etc.
+-/
+
+instance: OfNat Bool 0 where
+  ofNat := false
+
+instance: OfNat Bool 1 where
+  ofNat := true
+
+/-!
+Of course, the interpretation can be defined for all natural numbers.
+Note that the definition of `OfNat` is a polymorphic one, just like `list`.
+When we are instantializing them, we have to specify the `ofNat: Bool` for
+all `n: Nat`. To achieve that, we just put the parameters like `n: Nat`
+before the `:`, like a normal dependent function, and do the rest depending on `n`.
+-/
+
+instance some_interp (n: Nat): OfNat Bool n :=
+  OfNat.mk (if n %2 == 0 then false else true)
+
+
+/-!
+Or, with the syntactic sugar.
+-/
+
+instance (n: Nat): OfNat Bool n where
+  ofNat := if n %2 == 0 then false else true
+
+
+/-!
+Now you can try something like
+```lean
+#eval 3 + true
+```
+
+Note that we have just made the convention that literal `3` is considered as
+`3`, which does not mean that we interpret all `Nat` as `Bool`, for example,
+`(3: Nat) + true` is still not allowed.
+
+And, finally, we can explain the meaning of `deriving Repr`. In Lean, if you
+want to _pretty print_ a term (e.g., `#eval`, `#print` or use `IO`), you have
+to tell Lean how to translate it into a `String` so Lean can display it.
+This is necessary because there exist terms that are not defined as pure
+Lean code, e.g., most IO functions. Thus, Lean never assumes the `String`
+representation unless you define it or tell Lean to `derive` by adding
+`deriving Repr`.
+
+For more Lean-predefined typeclasses, see
+[here](https://lean-lang.org/functional_programming_in_lean/Overloading-and-Type-Classes/Standard-Classes/).
 -/
 
 /-!
-## Instance Search
+## Instance Searching
+Next, we focus on the case `(3: Nat) + false`. Intuitively, this `false` can
+also be understood as `0`, so this should be some `4: Nat`. To Lean this, we
+instantialize a heterogeneous addition.
 -/
+
+instance: HAdd Nat Bool Nat where
+  hAdd n b := n + if b then 1 else 0
+
+/-!
+The class `HAdd` is defined with 3 type parameters:
+```lean
+class HAdd A B C where
+  hAdd: A -> B -> C
+```
+which says that if you want to add a term of `A` and a term of `B` to get
+a result of type `C`, you have to specify `hAdd: A -> B -> C`. Then, to
+evaluate `(a: A) + (b: B)` of type `C`, Lean will use this `hAdd`.
+
+We defined such an addition for a `Nat` and a `Bool`, and the result type
+of it is `Nat`. We can try it now.
+-/
+
+#eval (3: Nat) + false
+
+/-!
+However, Lean played a trick here. As a polymorphic type, `HAdd` requires
+all its three type parameters to do the instance search. To illustrate that,
+let's define our own `HAdd` class.
+-/
+class MyHAdd (A B C: Type) where
+  hAdd: A -> B -> C
+
+/-!
+Then, we instantialize it.
+-/
+instance: MyHAdd Nat Bool Nat where
+  hAdd n b := n + if b then 1 else 0
+
+/-!
+You can try `#eval (myadd (3: Nat) false)`, and Lean will complain that it
+cannot determine without the third parameter. You may want to argue that there
+is only one instance whose first type is `Nat` and second type is `Bool`, so
+Lean should pick that definition. Well, Lean does not do the search for
+instances if one metavariable (the type parameter `C`) is not filled in.
+Thus, to use it, we must specify the `C` as follows.
+-/
+
+#eval (MyHAdd.hAdd (3: Nat) false: Nat)
+
+/-!
+Lean allows us to control this by tag the third type `C` as an
+_output parameter_, which means it will not do the search on this `C`.
+We can look at the following example, and if you are interested, you can
+look at the Lean-predefined `HAdd`. See
+[here](https://lean-lang.org/functional_programming_in_lean/Overloading-and-Type-Classes/Controlling-Instance-Search/)
+for more informations.
+-/
+class MyHAdd' (A B: Type) (C: outParam Type) where
+  hAdd: A -> B -> C
+
+instance: MyHAdd' Nat Bool Nat where
+  hAdd n b := n + if b then 1 else 0
+
+#eval (MyHAdd'.hAdd (3: Nat) false)
 
 /-!
 ## Type Coercion
+In the above examples, we only defined how to interpret natural number
+literals into `Bool`, and what if a `Nat` is added with to a `Bool`. They
+don't necessarily mean 'we can use a `Bool` as a `Nat`'. From the above, it's
+not hard to figure out that as long as we need a `Nat`, we can interpret
+`false` as `0` and `true` as `1`. To make such a convention, we instantialize
+the class `Coe`.
 -/
+
+instance: Coe Bool Nat where
+  coe b := match b with
+    | false => 0
+    | true => 1
+
+
+/-!
+Now, we can use a `Bool` as a `Nat`. For example,
+-/
+#eval false + (3: Nat)
+
+/-!
+There are other useful kinds of coersions. We introduce some of
+[them](https://lean-lang.org/functional_programming_in_lean/Overloading-and-Type-Classes/Coercions/).
+
+### Coercing to Types
+Mathematical objects often consist of a type and some structures defined on
+it. For example, a pointed type is just a type with a term of it.
+-/
+
+structure Pointed where
+  U: Type
+  e: U
+
+
+def pointedNat := Pointed.mk Nat 0
+
+/-!
+In general, a term `P: Pointed` is not a type, just as the pointedNat.
+We cannot say `0: pointedNat` but `0: pointedNat.U`. Thus, to define functions,
+you have to write down everything explicitly.
+-/
+
+def Pointed.map (P: Pointed) (f: P.U -> P.U): P.U := f P.e
+#eval Pointed.map pointedNat (fun x => x.add 1)
+
+/-!
+It will be convenient if we can use `Pointed` itself as a `type`. For example,
+we want to write `f: P -> P`. This means as long as we see a `P: Pointed` is
+used as a type, it should be `P.U`. To tell Lean that, we instantialize the
+`CoeSort` class. (Recall that `Sort` is `Type` + `Prop`.)
+-/
+
+instance: CoeSort Pointed Type where
+  coe p := p.U
+
+/-!
+Now, we can write it more concisely.
+-/
+def Pointed.map' (P: Pointed) (f: P -> P): P := f P.e
+
+/-!
+### Coercing to Functions
+Another situation is that we want a term to behavior like a function.
+For example, we want to make an `Adder` for natural numbers.
+-/
+
+structure Adder where
+  amount: Nat
+
+def add4 := Adder.mk 4
+def Adder.add (adder: Adder): Nat -> Nat := fun n => adder.amount + n
+#eval add4.add 3
+
+/-!
+To use the adder, we have to call `Adder.add`. Lean allows us to make the
+convention that `add4` can be used as a function `Nat -> Nat`. To do that,
+we instantialize the `CoeFun` class.
+```lean
+class CoeFun (α : Type) (makeFunctionType : outParam (α → Type)) where
+  coe : (x : α) → makeFunctionType x
+```
+This definition is a dependent version for the general cases. It has two
+parameters: the first for the type to be considered as a function, the
+second the type of that function. Since this type can be dependent on the
+first parameter, the second is declared as a function from the first one
+to the desired type.
+
+In the example of `Adder`, we only want a function of type `Nat -> Nat`,
+so we make a constant function to specify the type.
+-/
+
+instance: CoeFun Adder (fun _ => Nat -> Nat) where
+  coe a := a.add
+
+#check add4 3
+
+
+/-!
+The function definition for the second parameter will be helpful if we want
+encode the result type into the first parameter, e.g., the following.
+-/
+
+structure NatInterp where
+  output: Type
+  interp: Nat -> output
+
+instance: CoeFun NatInterp (fun i => Nat -> i.output) where
+  coe i := i.interp
+
+/-!
+This means for each `NatInterp`, we can specify the output type and it is
+then interpreted as a function from `Nat` to the output type.
+-/
+
+
+def interp2True := NatInterp.mk Bool (fun _ => true)
+#eval interp2True 9
+
+
+def interp2List := NatInterp.mk (List Nat) (fun n => [n])
+#eval interp2List 3
