@@ -107,19 +107,21 @@ transitive ones, etc.
 ### Reflexive Relations
 A relation `R` on a set `X` is *reflexive* if every element of `X` is related to itself.
 A relation `R` on a set `X` is *irreflexive* if every element of `X` is not related to itself.
+
+> Note that I define them with implicit parameters.
 -/
 
 class Reflexive {X} (P: Relation X) where
-  refl: forall x: X, P x x
+  refl: forall {x: X}, P x x
 
 def Relation.refl {X: Type} {P: Relation X} [inst: Reflexive P]:
-  forall {x: X}, P x x := inst.refl _  -- `_` is the placeholder, which is inferred automatically.
+  forall {x: X}, P x x := inst.refl
 
 class Irreflexive {X} (P: Relation X) where
-  irrefl: forall x: X, Not (P x x)
+  irrefl: forall {x: X}, Not (P x x)
 
 def Relation.irrefl {X: Type} {P: Relation X} [inst: Irreflexive P]:
-  forall {x: X}, Not (P x x) := inst.irrefl _
+  forall {x: X}, Not (P x x) := inst.irrefl
 
 
 /-!
@@ -127,7 +129,7 @@ For example, `le` is reflexive.
 -/
 
 instance le_reflexive: Reflexive le where
-  refl := le.le_refl
+  refl := le.le_refl _  -- `_` is the placeholder, which is inferred automatically.
 
 
 example: 5 ≤' 5 := by
@@ -139,7 +141,7 @@ example: 5 ≤' 5 := by
 -/
 
 instance {X: Type}: Reflexive (Eq (α := X)) where
-  refl := Eq.refl
+  refl := Eq.refl _
 
 
 /-!
@@ -172,11 +174,11 @@ to `rfl`. In real-world programming, you may prefer `@[refl]`.
 A relation `R` is *transitive* if `R a c` holds whenever `R a b` and `R b c` do.
 -/
 
-class Transitive {X} (P: Relation X) where
-  trans: forall a b c: X, P a b -> P b c -> P a c
+class Transitive {X} (R: Relation X) where
+  trans: forall {x y z: X}, R x y -> R y z -> R x z
 
-def Relation.trans {A: Type} {P: Relation A} [inst: Transitive P]:
-  forall {a b c: A}, P a b -> P b c -> P a c := inst.trans _ _ _
+def Relation.trans {X: Type} {R: Relation X} [inst: Transitive R]:
+  forall {x y z: X}, R x y -> R y z -> R x z := inst.trans
 
 
 /-!
@@ -186,7 +188,8 @@ def Relation.trans {A: Type} {P: Relation A} [inst: Transitive P]:
 We still use the example of `le`.
 -/
 instance le_transitive: Transitive le where
-  trans a b c := by
+  trans := by
+    intro x y z
     intro Hab Hbc
     induction Hbc with
     | le_refl => exact Hab
@@ -198,10 +201,10 @@ instance le_transitive: Transitive le where
 /-!
 So now, if you want to prove `3 ≤' 5`, you can use the transitivity, i.e., it suffices to
 prove `3 ≤' 4` and `4 ≤' 5`, which are exactl a `le.le_step` followed by `le.le_refl`.
-Note that this time we specify the intermediate value `b := 4`.
+Note that this time we specify the intermediate value `y := 4`.
 -/
 example: 3 ≤' 5 := by
-  apply Relation.trans (b := 4)  -- you can specify the intermediate value
+  apply Relation.trans (y := 4)  -- you can specify the intermediate value
   . apply le.le_step
     apply le.le_refl
   . apply le.le_step
@@ -231,17 +234,17 @@ if the only "cycles" in `R` are trivial ones.
 -/
 
 class Symmetric {X} (P: Relation X) where
-  symm: forall x y: X, P x y -> P y x
+  symm: forall {x y: X}, P x y -> P y x
 
 def Relation.symm {X} {P: Relation X} [inst: Symmetric P]:
-  forall {x y: X}, P x y -> P y x := inst.symm _ _
+  forall {x y: X}, P x y -> P y x := inst.symm
 
 
 class Antisymmetric {X} (P: Relation X) where
-  asymm: forall x y: X, P x y -> P y x -> x = y
+  asymm: forall {x y: X}, P x y -> P y x -> x = y
 
 def Relation.asymm {X} {P: Relation X} [inst: Antisymmetric P]:
-  forall {x y: X}, P x y -> P y x -> x = y := inst.asymm _ _
+  forall {x y: X}, P x y -> P y x -> x = y := inst.asymm
 
 
 /-!
@@ -253,7 +256,7 @@ Prove that the `≤` relation on naturals is not symmetric.
 theorem le_not_symmetric_rel : ¬ Symmetric le := by
   intro H
   have H1 : le 0 1 := le.le_step 0 0 (le.le_refl 0)
-  have H2 : le 1 0 := H.symm 0 1 H1
+  have H2 : le 1 0 := H.symm H1
   -- Now we have le 1 0, which means 1 ≤ 0, but this is impossible
   cases H2
 
@@ -312,8 +315,8 @@ equivalence relation that is compatible with some algebraic operation. Here, we 
 it to be a relation that is preserved under some endomorphism.
 -/
 
-class Congruence {X: Type} (R: Relation X) (S: X -> X) where
-  cong: forall x y: X, R x y -> R (S x) (S y)
+class Congruence {X: Type} (R: Relation X) (f: X -> X) where
+  cong: forall {x y: X}, R x y -> R (f x) (f y)
 
 /-!
 For example, `le` is a congruence relation under `Nat.succ`.
@@ -340,8 +343,8 @@ We also say the congruence is kept if `P` is a congruence under `f` implies
 -/
 class KeepCong {X: Type} (P Q: Relation X) where
   keep_cong: forall (f: X -> X),
-    (forall x y, (P x y) -> P (f x) (f y)) ->
-    forall x y, (Q x y) -> Q (f x) (f y)
+    (forall {x y}, (P x y) -> P (f x) (f y)) ->
+    forall {x y}, (Q x y) -> Q (f x) (f y)
 
 
 def Relation.keep_cong {X: Type}
@@ -365,14 +368,182 @@ A relation `P` is a sub-relation of `Q` if `P x y` implies `Q x y` for all `x y`
 -/
 
 class SubRel {X} (P: Relation X) (Q: Relation X): Prop where
-  inclusion: forall x y: X, P x y -> Q x y
+  inclusion: forall {x y: X}, P x y -> Q x y
 
 notation: 60 P " sub_rel " Q => SubRel P Q
 
 def Relation.super {X: Type} {R Super: Relation X}
   [inst: R sub_rel Super]: forall {x y: X}, R x y -> Super x y
 :=
-  inst.inclusion _ _
+  inst.inclusion
+
+/-!
+For example `=` is a sub-relation of `≤'`.
+-/
+instance: SubRel Eq le where
+  inclusion := by
+    intro x y H
+    rewrite [H]
+    apply le.le_refl
+
+
+/-!
+We can also observe that `SubRel` is it self a poset on all relations
+-/
+
+instance sub_rel_refl {X} {R: Relation X}: R sub_rel R where
+  inclusion := id
+
+instance: forall {X: Type}, Reflexive (SubRel (X := X)) where
+  refl := by
+    intro P
+    apply sub_rel_refl
+
+
+instance: forall {X: Type}, Transitive (SubRel (X := X)) where
+  trans {P Q R} {s1 s2} := by
+    apply SubRel.mk
+    intro a b H
+    apply Q.super
+    apply P.super
+    apply H
+
+
+/-!
+To prove the antisymmetry, we have to use functional and propositional extensionality.
+-/
+
+theorem rel_eq: forall {A: Type} {P Q: Relation A},
+  (forall x y: A, P x y <-> Q x y) ->
+  P = Q
+:= by
+  intro A P Q H
+  apply funext
+  intro x
+  apply funext
+  intro y
+  apply propext
+  apply H
+
+instance: forall {X: Type}, Antisymmetric (SubRel (X := X)) where
+  asymm := by
+    intro P Q s1 s2
+    apply rel_eq
+    intro a b
+    apply Iff.intro
+    . apply s1.inclusion
+    . apply s2.inclusion
+
+
+/-!
+### Closure under a Predicate
+
+Given a predicate `Pred: Relation X -> Prop` and a relation `R: X -> X -> Prop`, the closure `C` of
+`R` under `Pred` is a relation satisfying the following:
+1. `R` is a sub-relation of `C`;
+2. `Pred C` is proved;
+3. if `Q` is another relation satyisfying 1,2, then `C` is a sub-relation of `Q`.
+-/
+
+abbrev RelationPred (X: Type) := Relation X -> Prop
+
+class Closure {X: Type} (Pred: outParam (RelationPred X)) (R: outParam (Relation X)) (C: Relation X) where
+  sub: R sub_rel C
+  pred: Pred C
+  least: forall (D: Relation X), Pred D -> (R sub_rel D) -> C sub_rel D
+
+
+/-!
+Then, we can instantialize `R sub_rel C` so that we can use `Relation.super` as defined above.
+Also, two closures must be the sub-relation of each other. We instantialize it as `Closure.cl_cl_sub`.
+
+> Note that we need to declare `Pred` and `R` to be `outParam`, because the information of
+> them will be erased if we want to instantialize `R sub_rel C`.
+>
+> If you don't like to tag them with `outParam`, you can remove them, but instead of the
+> instantialization, you can prove the following two auxiliary theorems.
+> ```lean
+> theorem Closure.super {X: Type} {R C: Relation X} {Pred: RelationPred X} [inst: Closure Pred R C]
+> : forall {x y: X}, R x y -> C x y
+> := inst.sub.inclusion _ _
+>
+> theorem Closure.cl_cl_sub {X: Type} {Pred: RelationPred X} {R: Relation X} {C1 C2: Relation X}
+>   [inst1: Closure Pred R C1] [inst2: Closure Pred R C2]
+> : forall {x y: X}, C1 x y -> C2 x y
+> := by
+>   intro x y
+>   let sub := inst1.least C2 inst2.pred inst2.sub
+>   apply sub.inclusion
+> ```
+-/
+
+instance {X: Type} {R C: Relation X} {Pred: RelationPred X} [inst: Closure Pred R C] : R sub_rel C
+:= inst.sub
+
+instance Closure.cl_cl_sub {X: Type} (Pred: RelationPred X) {R: Relation X} {C1 C2: Relation X}
+  [inst1: Closure Pred R C1] [inst2: Closure Pred R C2]
+: C1 sub_rel C2 where
+  inclusion := by
+    intro a b
+    let sub := inst1.least C2 inst2.pred inst2.sub
+    apply sub.inclusion
+
+/-!
+We then define the closure operation. Here, a relation operation is a function mapping a relation
+to another, and being a closure operation means that it can turns a relation into its closure under
+some predicate.
+-/
+
+abbrev RelationOp (X: Type) := Relation X -> Relation X
+
+class ClosureOp {X: Type} (Pred: outParam (RelationPred X)) (Cl: (RelationOp X)) where
+  close (R: Relation X): Closure Pred R (Cl R)
+  sub {R: Relation X} := (close R).sub (R := R)
+  pred {R: Relation X} := (close R).pred (R := R)
+  least {R D: Relation X} := (close R).least (R := R) (D := D)
+
+/-!
+We also define the related syntactic sugar and instances.
+-/
+
+def RelationOp.close {X: Type}
+  (Cl: RelationOp X) (R: Relation X) {Pred: RelationPred X}
+  [inst: ClosureOp Pred Cl]
+:= inst.close R
+
+
+instance {X: Type} {Pred: RelationPred X} (Cl: RelationOp X) [inst: ClosureOp Pred Cl]
+  (R: Relation X): Closure Pred R (Cl R)
+:= inst.close R
+
+
+instance {X: Type} {Pred: RelationPred X} {Cl: RelationOp X}
+  [inst: ClosureOp Pred Cl] {R: Relation X}: R sub_rel (Cl R)
+:= (inst.close R).sub
+
+
+/-!
+Of course, the closure operation makes `sub_rel` a congruence relation, and is montone
+as a function from a poset to itself.
+-/
+instance cl_op_cl_op_sub {X: Type} {Pred: RelationPred X} {C1 C2: RelationOp X}
+  [inst1: ClosureOp Pred C1] [inst2: ClosureOp Pred C2]
+  {R: Relation X}: C1 R sub_rel C2 R
+where
+  inclusion := by
+    intro a b
+    let sub := @inst1.least R (C2 R) inst2.pred inst2.sub
+    apply sub.inclusion
+
+instance cl_mono {X: Type} {Pred: RelationPred X} {Cl: RelationOp X} [inst: ClosureOp Pred Cl]
+  {R S: Relation X} [r1: R sub_rel S]: Cl R sub_rel Cl S
+where
+  inclusion := by
+    have r2: S sub_rel Cl S := inst.sub
+    have r3: R sub_rel Cl S := Relation.trans r1 r2
+    let H := @inst.least R (Cl S) inst.pred r3
+    intro x y
+    apply H.inclusion
 
 
 /-!
@@ -381,29 +552,172 @@ The *reflexive, transitive closure* of a relation `R` is the smallest relation t
 and that is both reflexive and transitive. We saw this concept earlier when we looked at the
 `clos_refl_trans` relation in the IndProp chapter.
 
-Let's define it again here and explore its properties:
+Let's define it again here and explore its properties with the `Closure` typeclass.
 -/
+def RTPred {X: Type} (R: Relation X) := Reflexive R ∧ Transitive R
 
-inductive clos_refl_trans_rel {X : Type} (R : X → X → Prop) : X → X → Prop where
-  | rt_step (x y : X) : R x y → clos_refl_trans_rel R x y
-  | rt_refl (x : X) : clos_refl_trans_rel R x x
-  | rt_trans (x y z : X) : clos_refl_trans_rel R x y → clos_refl_trans_rel R y z → clos_refl_trans_rel R x z
+/--
+Reflexive Transitive relation Closure
+-/
+inductive RTCl {X} (R: Relation X): Relation X where
+  | refl {x: X}: RTCl R x x
+  | step {x y z: X}: R x y -> RTCl R y z -> RTCl R x z
+
+
+instance {X} {R: Relation X}: Transitive (RTCl R) where
+  trans := by
+    intro x y z Hxy
+    induction Hxy with
+    | refl => solve_by_elim
+    | @step x t y Hxt Hty IHty =>
+      intro Hyz
+      specialize (IHty Hyz)
+      constructor
+      . apply Hxt
+      . apply IHty
+
+instance {X} {R: Relation X}: Reflexive (RTCl R) where
+  refl := RTCl.refl
 
 /-!
-### Exercise: 3 stars, standard, optional (clos_refl_trans_closure)
+We define this function in case Lean cannot figure out the correct instance
+when we are using `Relation.trans`.
+-/
+def RTCl.trans {X} {R: Relation X}: forall {x y z},
+  RTCl R x y -> RTCl R y z -> RTCl R x z
+:= (RTCl R).trans
 
-Use `clos_refl_trans_rel` to prove the following facts about relations.
+
+/-!
+Then, the mean theorem: `RTCl R` is the closure of `R` under `RTPred`. It has the
+name `RTCl.close` so that `RTCl.close R` will be the closure.
+-/
+instance RTCl.close {X} (R: Relation X): Closure RTPred R (RTCl R) where
+  sub := SubRel.mk $ by
+    intro x y H
+    apply RTCl.step
+    . apply H
+    . apply RTCl.refl
+  pred := by
+    constructor
+    . /- Reflexive -/
+      apply Reflexive.mk RTCl.refl
+    . /- Transitive -/
+      constructor
+      intro x y z
+      apply RTCl.trans
+  least := by
+    intro Q inst sub
+    let inst_refl := inst.left
+    let inst_trans := inst.right
+    apply SubRel.mk
+    intro x y H
+    induction H with
+    | refl =>
+      apply Q.refl
+    | @step x t y Hxt Hty IH =>
+      apply Q.trans
+      . apply sub.inclusion
+        apply Hxt
+      . apply IH
+
+
+/-!
+Moreover, this says that `RTCl` is the closure operation.
+-/
+instance rtcl_cl_op {X: Type}: ClosureOp RTPred RTCl (X := X) where
+  close := RTCl.close
+
+instance {X} {R: Relation X}: KeepCong R (RTCl R) where
+  keep_cong := by
+    intro f HCong x y HR
+    induction HR with
+    | refl =>
+      apply RTCl.refl
+    | @step x y z Hxy Hyz IHyz =>
+      have Hfxy := (HCong Hxy)
+      apply RTCl.step Hfxy IHyz
+
+
+/-!
+### Equivalence Closure
+Recall that we have seen the equivalence predicate:
+```lean
+def EPred {A: Type} (P: Relation A) := Reflexive P ∧ Transitive P ∧ Symmetric P
+```
+We can also define its closure operation.
 -/
 
-theorem rsc_R : ∀ (X : Type) (R : X → X → Prop) (x y : X),
-  R x y → clos_refl_trans_rel R x y := by
-  intro X R x y H
-  apply clos_refl_trans_rel.rt_step
-  exact H
+/--
+Equivalence Closure
+-/
+inductive ECl {X} (R: Relation X): Relation X where
+  | inclusion {x y}: R x y -> ECl R x y
+  | refl {x}: ECl R x x
+  | trans {x y z}: ECl R x y -> ECl R y z -> ECl R x z
+  | symm {x y}: ECl R x y -> ECl R y x
 
-theorem rsc_trans : ∀ (X : Type) (R : X → X → Prop) (x y z : X),
-  clos_refl_trans_rel R x y → clos_refl_trans_rel R y z → clos_refl_trans_rel R x z := by
-  intro X R x y z Hxy Hyz
-  apply clos_refl_trans_rel.rt_trans
-  exact Hxy
-  exact Hyz
+/-!
+Of course, it satisfies these three classes.
+-/
+instance {X} {R: Relation X}: Reflexive (ECl R) where
+  refl := ECl.refl
+
+instance {X} {R: Relation X}: Transitive (ECl R) where
+  trans := ECl.trans
+
+instance {X} {R: Relation X}: Symmetric (ECl R) where
+  symm := ECl.symm
+
+
+/-!
+And, it is the smallest one.
+-/
+instance ECl.close {X} (R: Relation X): Closure EPred R (ECl R) where
+  sub := SubRel.mk ECl.inclusion
+  pred := by
+    constructor
+    . /- Reflexive -/
+      apply Reflexive.mk ECl.refl
+    constructor
+    . /- Transitive -/
+      apply Transitive.mk ECl.trans
+    . /- Symmetric -/
+      apply Symmetric.mk ECl.symm
+  least := by
+    intro Q inst sub
+    let inst_refl := inst.left
+    let inst_trans := inst.right.left
+    let inst_symm := inst.right.right
+    apply SubRel.mk
+    intro x y H
+    induction H
+    case inclusion x y Hxy =>
+      apply sub.inclusion
+      apply Hxy
+    case refl x =>
+      apply Q.refl
+    case trans Hxy Hyz =>
+      apply Q.trans Hxy Hyz
+    case symm Hab =>
+      apply Q.symm Hab
+
+instance ecl_cl_op {X: Type}: ClosureOp EPred ECl (X := X) where
+  close := ECl.close
+
+/-!
+And, `ECl` also keeps the congruence.
+-/
+
+instance {X} {R: Relation X}: KeepCong R (ECl R) where
+  keep_cong := by
+    intro f HCong x y HR
+    induction HR with
+    | @inclusion x y H =>
+      apply ECl.inclusion (HCong H)
+    | @refl =>
+      apply ECl.refl
+    | @trans x y z Hxy Hyz IHxy IHyz =>
+      apply ECl.trans IHxy IHyz
+    | @symm x y Hxy IHxy =>
+      apply ECl.symm IHxy
