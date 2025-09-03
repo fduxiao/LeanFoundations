@@ -7,6 +7,7 @@ This file is a Lean 4 translation of the "Relations" chapter from
 Software Foundations (Logical Foundations).
 -/
 
+import LeanFoundations.Logic.Basic
 import LeanFoundations.Logic.IndPrinciples
 
 /-!
@@ -35,7 +36,7 @@ the proposition `n ≤' m`, which may or may not be provable.
 
 Hence, in Lean, we model relations on `X` as `X -> X -> Prop`.
 > Recall that `abbrev` means you give an alias to some type, while `def` means you want to define
-> a new.
+> a new one.
 -/
 
 abbrev Relation (X: Type) := X -> X -> Prop
@@ -50,7 +51,7 @@ or make new relations upon them. And, you will see that typeclass will help a lo
 /-!
 ## Basic Properties of Relations
 
-We begin with some basic mathematical examples and shows some naive applications of typeclass.
+We begin with some basic mathematical examples and show some naive applications of typeclass.
 
 ### Partial Functions
 A relation `R` on a set `X` is a *partial function* if, for every `x`, there is at most one `y`
@@ -108,7 +109,7 @@ transitive ones, etc.
 A relation `R` on a set `X` is *reflexive* if every element of `X` is related to itself.
 A relation `R` on a set `X` is *irreflexive* if every element of `X` is not related to itself.
 
-> Note that I define them with implicit parameters.
+> Note that they are defined with implicit parameters.
 -/
 
 class Reflexive {X} (P: Relation X) where
@@ -212,7 +213,7 @@ example: 3 ≤' 5 := by
 
 /-!
 You can also repeat `Relation.trans` in chain, and let Lean to figure out the
-intermediate value. This suggests some kinds of automation of proof.
+intermediate value. This suggests some kind of automation of proof.
 -/
 example: 3 ≤' 6 := by
   apply Relation.trans  -- or let Lean to figure that out
@@ -274,7 +275,7 @@ A relation is an *equivalence* if it's reflexive, symmetric, and transitive.
 
 This time, we cannot define it as a typeclass based on `Reflexive`, `Transitive` and
 `Symmetric` because Lean dose not provide us suitable syntactic sugar. Instead, I
-declare it as a predicate. We will soon see the usage of predicates when it comes
+declare it as a _predicate_. We will soon see the usage of predicates when it comes
 to _closure_. Let's just look at the definition now.
 -/
 
@@ -388,7 +389,7 @@ instance: SubRel Eq le where
 
 
 /-!
-We can also observe that `SubRel` is it self a poset on all relations
+We can also observe that `SubRel` is itself a poset on all relations
 -/
 
 instance sub_rel_refl {X} {R: Relation X}: R sub_rel R where
@@ -442,7 +443,7 @@ Given a predicate `Pred: Relation X -> Prop` and a relation `R: X -> X -> Prop`,
 `R` under `Pred` is a relation satisfying the following:
 1. `R` is a sub-relation of `C`;
 2. `Pred C` is proved;
-3. if `Q` is another relation satyisfying 1,2, then `C` is a sub-relation of `Q`.
+3. if `D` is another relation satyisfying 1,2, then `C` is a sub-relation of `D`.
 -/
 
 abbrev RelationPred (X: Type) := Relation X -> Prop
@@ -455,29 +456,11 @@ class Closure {X: Type} (Pred: outParam (RelationPred X)) (R: outParam (Relation
 
 /-!
 Then, we can instantialize `R sub_rel C` so that we can use `Relation.super` as defined above.
-Also, two closures must be the sub-relation of each other. We instantialize it as `Closure.cl_cl_sub`.
-
-> Note that we need to declare `Pred` and `R` to be `outParam`, because the information of
-> them will be erased if we want to instantialize `R sub_rel C`.
->
-> If you don't like to tag them with `outParam`, you can remove them, but instead of the
-> instantialization, you can prove the following two auxiliary theorems.
-> ```lean
-> theorem Closure.super {X: Type} {R C: Relation X} {Pred: RelationPred X} [inst: Closure Pred R C]
-> : forall {x y: X}, R x y -> C x y
-> := inst.sub.inclusion _ _
->
-> theorem Closure.cl_cl_sub {X: Type} {Pred: RelationPred X} {R: Relation X} {C1 C2: Relation X}
->   [inst1: Closure Pred R C1] [inst2: Closure Pred R C2]
-> : forall {x y: X}, C1 x y -> C2 x y
-> := by
->   intro x y
->   let sub := inst1.least C2 inst2.pred inst2.sub
->   apply sub.inclusion
-> ```
+Also, two closures must be the sub-relation of each other. We instantialize then as `Closure.cl_sub`
+and `Closure.cl_cl_sub`.
 -/
 
-instance {X: Type} {R C: Relation X} {Pred: RelationPred X} [inst: Closure Pred R C] : R sub_rel C
+instance Closure.cl_sub {X: Type} {R C: Relation X} {Pred: RelationPred X} [inst: Closure Pred R C] : R sub_rel C
 := inst.sub
 
 instance Closure.cl_cl_sub {X: Type} (Pred: RelationPred X) {R: Relation X} {C1 C2: Relation X}
@@ -489,8 +472,33 @@ instance Closure.cl_cl_sub {X: Type} (Pred: RelationPred X) {R: Relation X} {C1 
     apply sub.inclusion
 
 /-!
+> Note that we need to declare `Pred` and `R` to be `outParam`, because the information of
+> them will be erased if we want to instantialize `R sub_rel C`. When Lean wants to find an
+> instance of `R sub_rel C`, it has to also search for the instances of `Closure.cl_sub`. As
+> noted before, the parameter `Pred` will be unknown at this point, and Lean will refuse to
+> continue if you don't tag them with `outParam`.
+>
+> We are doing this purely for technical reason: to use `Relation.super` with a relaiton and its
+> closure, we have to fulfill the class `SubRel`. If you are unhappy with this technical compromise,
+> you can remove them, but instead, prove the following two auxiliary theorems.
+> ```lean
+> theorem Closure.super {X: Type} {R C: Relation X} {Pred: RelationPred X} [inst: Closure Pred R C]
+> : forall {x y: X}, R x y -> C x y
+> := inst.sub.inclusion
+>
+> theorem Closure.cl_cl_sub {X: Type} {Pred: RelationPred X} {R: Relation X} {C1 C2: Relation X}
+>   [inst1: Closure Pred R C1] [inst2: Closure Pred R C2]
+> : forall {x y: X}, C1 x y -> C2 x y
+> := by
+>   intro x y
+>   let sub := inst1.least C2 inst2.pred inst2.sub
+>   apply sub.inclusion
+> ```
+-/
+
+/-!
 We then define the closure operation. Here, a relation operation is a function mapping a relation
-to another, and being a closure operation means that it can turns a relation into its closure under
+to another, and being a closure operation means that it can turn a relation into its closure under
 some predicate.
 -/
 
@@ -581,7 +589,7 @@ instance {X} {R: Relation X}: Reflexive (RTCl R) where
 
 /-!
 We define this function in case Lean cannot figure out the correct instance
-when we are using `Relation.trans`.
+when using `Relation.trans`.
 -/
 def RTCl.trans {X} {R: Relation X}: forall {x y z},
   RTCl R x y -> RTCl R y z -> RTCl R x z
