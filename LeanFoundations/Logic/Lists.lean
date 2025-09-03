@@ -295,6 +295,14 @@ def another_pair := {
 #eval some_pair.snd  -- 2
 
 /-!
+You can also omit the names of the fields like `fst`, `snd`. This time, we use angled
+brackets to enclose them.
+-/
+def a_third_pair: AnotherNatProd := ⟨7, 2⟩
+#eval a_third_pair.fst -- 7
+#eval a_third_pair.snd -- 2
+
+/-!
 ## Lists of Numbers
 
 Now let's generalize from pairs to lists - data structures that can hold any number

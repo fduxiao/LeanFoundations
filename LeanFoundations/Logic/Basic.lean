@@ -762,68 +762,6 @@ def Nat.factorial: Nat -> Nat := sorry
 
 end scratch
 
-/-!
-### Exercise: 2 star, standard (NatAdd)
-Next, we define a special type of natural numbers but with addition
-a part of _the language of natural numbers_. Unlike the `Nat` we have just
-defined, `add` is not defined as a function on `NatAdd`, but a constructor
-that allows you to concatenate two numbers syntactically. In both cases,
-the number of `S` (`succ`) in some term should be the _number represented by the term_.
--/
-
-inductive NatAdd where
-  | Z : NatAdd
-  | S : NatAdd -> NatAdd
-  | A : NatAdd -> NatAdd -> NatAdd
-
-/-!
-Apparently, we can reduce each term of type `NatAdd` to a term made of
-`S` and `Z`, i.e., we want to define some suitable function to remove
-all `A` in a term while keeping the number of `S` in that term.
-
-A first trial is the following.
-```lean
-def NatAdd.reduce: NatAdd -> NatAdd
-  | .Z => .Z
-  | .S n => .S n.reduce
-  | .A n1 n2 => match n1.reduce with
-    | .Z => n2
-    | .S m => .S (m.A n2).reduce
-    | .A m1 m2 => .Z  -- this case is unnecessary
-```
-But lean will complain `fail to show termination` (why?). Instead, we define
-an auxiliary function `add: NatAdd -> NatAdd -> NatAdd` to do the addition.
-Figure out what is the defintion of `NatAdd.reduce`.
--/
-
-def NatAdd.add: NatAdd -> NatAdd -> NatAdd
-  | .Z, n => n
-  | .S m, n => .S (m.add n)
-  | _, _ => .Z  -- this cases is unnecessary
-
-
-def NatAdd.reduce: NatAdd -> NatAdd
-  | .Z => .Z
-  | .S n => .S n.reduce
-  | .A n1 n2 => n1.reduce.add n2.reduce
-
-
-/-!
-You can check with your definition with the following function, which
-checks whether a term contains `.A`. After `.reduce`, a term should
-not contain any `.A`
--/
-
-def NatAdd.bvalue: NatAdd -> Bool
-  | .Z => true
-  | .S n => n.bvalue
-  | .A _ _ => False
-
-
-#eval (NatAdd.Z.S.add NatAdd.Z.S.S).reduce
-#eval (NatAdd.Z.S.add NatAdd.Z.S.S).reduce.bvalue
-
-
 /-! ## Proofs -/
 namespace scratch
 
