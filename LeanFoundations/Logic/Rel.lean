@@ -1236,9 +1236,9 @@ def NatAdd.partial_eval: NatAdd -> NatAdd
 
 
 /-!
-Besides, we need a relation `NatAdd.L` between `NatAdd.R2` and `RTCl NatAdd.R2` to hold
-the relation between a term and its `partial_eval`. This is less powerful than `RTCl`, so
-facts about it are easier to prove.
+Besides, we need a relation `NatAdd.L` ($\to_L$) between `NatAdd.R2` and `RTCl NatAdd.R2` to
+hold the relation between a term and its `partial_eval`. This relation can hold more _parallel_
+calculations but is not as much as `RTCl`, so facts about it are easier to prove.
 -/
 
 inductive NatAdd.L: Relation NatAdd where
@@ -1250,6 +1250,7 @@ inductive NatAdd.L: Relation NatAdd where
   -- congruence
   | SCong {m n}:  NatAdd.L m n ->  NatAdd.L m.S n.S
   | AddCong {m1 m2 n1 n2}:  NatAdd.L m1 m2 ->  NatAdd.L n1 n2 ->  NatAdd.L (m1 + n1) (m2 + n2)
+
 
 instance: NatAdd.R2 sub_rel NatAdd.L where
   inclusion := by
@@ -1275,13 +1276,11 @@ instance: NatAdd.R2 sub_rel NatAdd.L where
       . exact IH
 
 
+/-!
+We then give a alias `MR2` to `RTCl NatAdd.R2` (multiple `R2`), and prove it is a congruence
+under addition.
+-/
 abbrev NatAdd.MR2 := RTCl NatAdd.R2
-
-theorem NatAdd.MR2.s_cong: forall {m n: NatAdd}, m.MR2 n -> m.S.MR2 n.S := by
-  intro m n
-  apply RTCl.keep_cong
-  apply R2.SCong
-
 
 theorem NatAdd.MR2.add_cong {m1 m2 n1 n2: NatAdd}:
   m1.MR2 m2 ->
@@ -1298,7 +1297,9 @@ theorem NatAdd.MR2.add_cong {m1 m2 n1 n2: NatAdd}:
       apply R2.AddCong1
     . exact Hm
 
-
+/-!
+Then, `L` is a sub-relation of `MR2`.
+-/
 instance: NatAdd.L sub_rel NatAdd.MR2 where
   inclusion := by
     intro x y H
@@ -1324,6 +1325,9 @@ instance: NatAdd.L sub_rel NatAdd.MR2 where
     | @AddCong m1 m2 n1 n2 Hm Hn IHm IHn =>
       apply NatAdd.MR2.add_cong IHm IHn
 
+/-!
+And, the congruence is also kept.
+-/
 
 instance: KeepCong NatAdd.L NatAdd.MR2 where
   keep_cong := by
@@ -1340,6 +1344,13 @@ instance: KeepCong NatAdd.L NatAdd.MR2 where
         exact Hxy
       . exact IH
 
+/-!
+Our core lemma is that `m.L n` implies `n.L M.partial_eval`, which says that
+if a term `m` can be reduced to `n`, then, certainly `n` could be reduced to the `m` with
+all possible parallel calculations done.
+
+To prove it, we need these two lemmas.
+-/
 
 theorem NatAdd.L.S_inverse: forall {m n: NatAdd}, m.S.L n.S -> m.L n := by
   intro m n H
@@ -1374,6 +1385,14 @@ theorem NatAdd.L.partial_eval: forall n: NatAdd, n.L n.partial_eval := by
       . exact IHn1
       . exact IHn2
 
+
+/-!
+For the core lemma, we do the induction on the construction of `m.L n`. The trick here is that
+for every case (constructor) of `m.L n`, we also has `m'.L n'` in the premise where `m'`, `n'`
+are sub-expressions (sub-trees) of `m` and `n`. Therefore, you are able to trigger the
+inductive hypothesis. After you perform the `partial_eval`, you can use congruence and calculation
+rules to turn the goal into facts about `partial_eval` of sub-expressions.
+-/
 
 theorem NatAdd.L.partial_eval_left: forall m n: NatAdd, m.L n -> n.L m.partial_eval := by
   intro m n HR
@@ -1411,11 +1430,14 @@ theorem NatAdd.L.partial_eval_left: forall m n: NatAdd, m.L n -> n.L m.partial_e
         . exact IHm
         . exact IHn
     | A =>
-      apply AddCong
+      apply L.AddCong
       . exact IHm
       . exact IHn
 
 
+/-!
+An immediate corollary of it is the congruence of `L` under `partial_eval`.
+-/
 theorem NatAdd.L.partial_eval_cong: forall m n: NatAdd,
   m.L n -> m.partial_eval.L n.partial_eval
 := by
@@ -1424,6 +1446,20 @@ theorem NatAdd.L.partial_eval_cong: forall m n: NatAdd,
   apply H.partial_eval_left
 
 
+/-!
+Finally, we prove that `R2` is semi-confluent. If `m1.R2 m2` and `m1.MR2 m3`, we then
+choose `m4` to be `m3.partial_eval`, so `m3.MR2 m3.partial_eval`. For `m2`, we consider
+`m2.MR2 m1.partial_eval` and `m1.partial_eval m3.partial_eval`.
+
+```
+m1 --> m2 --> m1.partial_eval
+|                   |
+|                   |
+|                   |
+v                   v
+m3 ---------> m3.partial_eval
+```
+-/
 instance NatAdd.R2.semi_confl: SemiConfluent NatAdd.R2 where
   semi_confl := by
     intro m1 m2 m3 H12 H13
