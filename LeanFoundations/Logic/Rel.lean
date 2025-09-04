@@ -338,20 +338,20 @@ instance: Congruence le Nat.succ where
 
 
 /-!
-We also say the congruence is kept if `P` is a congruence under `f` implies
-`Q` is a congruence under `f`.
+We also say the congruence is kept if `R` is a congruence under `f` implies
+`S` is a congruence under `f`.
 -/
-class KeepCong {X: Type} (P Q: Relation X) where
+class KeepCong {X: Type} (R S: Relation X) where
   keep_cong: forall (f: X -> X),
-    (forall {x y}, (P x y) -> P (f x) (f y)) ->
-    forall {x y}, (Q x y) -> Q (f x) (f y)
+    (forall {x y}, (R x y) -> R (f x) (f y)) ->
+    forall {x y}, (S x y) -> S (f x) (f y)
 
 
 def Relation.keep_cong {X: Type}
-  {P Q: Relation X} (f: X -> X)
-  [inst: KeepCong P Q]:
-    (forall {x y}, (P x y) -> P (f x) (f y)) ->
-    forall {x y}, (Q x y) -> Q (f x) (f y) :=
+  {R S: Relation X} (f: X -> X)
+  [inst: KeepCong R S]:
+    (forall {x y}, (R x y) -> R (f x) (f y)) ->
+    forall {x y}, (S x y) -> S (f x) (f y) :=
     inst.keep_cong f
 
 /-!
@@ -587,15 +587,6 @@ instance {X} {R: Relation X}: Reflexive (RTCl R) where
   refl := RTCl.refl
 
 /-!
-We define this function in case Lean cannot figure out the correct instance
-when using `Relation.trans`.
--/
-def RTCl.trans {X} {R: Relation X}: forall {x y z},
-  RTCl R x y -> RTCl R y z -> RTCl R x z
-:= (RTCl R).trans
-
-
-/-!
 Then, the mean theorem: `RTCl R` is the closure of `R` under `RTPred`. It has the
 name `RTCl.close` so that `RTCl.close R` will be the closure.
 -/
@@ -612,7 +603,7 @@ instance RTCl.close {X} (R: Relation X): Closure RTPred R (RTCl R) where
     . /- Transitive -/
       constructor
       intro x y z
-      apply RTCl.trans
+      apply Relation.trans
   least := by
     intro Q inst sub
     let inst_refl := inst.left
@@ -635,6 +626,10 @@ Moreover, this says that `RTCl` is the closure operation.
 instance rtcl_cl_op {X: Type}: ClosureOp RTPred RTCl (X := X) where
   close := RTCl.close
 
+/-!
+And, it keeps the congruence. We provides an extra syntactic sugar in case
+Lean cannot figure out correct implicit arguments.
+-/
 instance {X} {R: Relation X}: KeepCong R (RTCl R) where
   keep_cong := by
     intro f HCong x y HR
@@ -644,6 +639,13 @@ instance {X} {R: Relation X}: KeepCong R (RTCl R) where
     | @step x y z Hxy Hyz IHyz =>
       have Hfxy := (HCong Hxy)
       apply RTCl.step Hfxy IHyz
+
+
+theorem RTCl.keep_cong {X} {R: Relation X} {f: X -> X}:
+  (forall {x y}, (R x y) -> R (f x) (f y)) ->
+    forall {x y}, (RTCl R x y) -> RTCl R (f x) (f y)
+:= by
+  apply R.keep_cong (S := RTCl R)
 
 
 /-!
@@ -731,6 +733,17 @@ instance {X} {R: Relation X}: KeepCong R (ECl R) where
 
 
 /-!
+### Exercise: 3 stars, standard, optional (ECl.from_RTCl)
+It is obvious that the reflexive and transitive closure is included in the
+equivalence closure. Prove it.
+-/
+instance ECl.from_RTCl {X: Type} (R: Relation X):
+  RTCl R sub_rel ECl R
+where
+  inclusion := by
+    admit
+
+/-!
 ## Church-Rosser Theorem
 
 Our final section is to prove the Church-Rosser theorem. This theorem was proposed to prove the
@@ -785,6 +798,7 @@ calculation process.
 > equivalence $=_T$. For example `6` and `3 + (1 + 2)` are two different elements in
 > the set of terms, but are related by the equivalence $=_T$.
 
+### The Formal Language NatAdd
 Let's formalize this in Lean. First, we model the terms as a type `NatAdd`.
 -/
 
@@ -838,7 +852,7 @@ The reduction relation is then defined as follows. (It is called R2 to mean _red
 
 inductive NatAdd.R2: Relation NatAdd where
   -- arithmetic
-  | ZAdd {n: NatAdd}: NatAdd.R2 (0 + n) n
+  | ZAdd {n: NatAdd}: NatAdd.R2 (.Z + n) n
   | SAdd {m n}: NatAdd.R2 (m.S + n) (m + n).S
   -- for congruence
   | SCong {m n}: NatAdd.R2 m n -> NatAdd.R2 m.S n.S
@@ -1056,3 +1070,376 @@ theorem Relation.MNormal.Normal {X: Type} {R: Relation X} [Irreflexive R]:
     sorry
   rewrite [E] at Hx
   apply R.irrefl Hx
+
+/-!
+### Uniqueness of Normal Form
+Then, we come to the main theorem of this section: the uniqueness of normal form.
+The basic idea is that if a term is reduced to two terms, then we should be able
+to find a third term such that these two can be reduced to it. Thus, if a term
+is reduced to two normal forms, they must be equal.
+
+We call such a relation a _confluent_ one. Strictly speaking, it is defined as follows.
+-/
+
+class Confluent {X: Type} (R: Relation X) where
+  confl: forall {m1 m2 m3},
+    RTCl R m1 m2 -> RTCl R m1 m3 -> exists m4, RTCl R m2 m4 /\ RTCl R m3 m4
+
+def Relation.confl {X: Type} (R: Relation X) [inst: Confluent R]
+  {m1 m2 m3} := inst.confl (m1 := m1) (m2 := m2) (m3 := m3)
+
+
+/-!
+In general, it is hard to prove a relation is confluent. Instead, we prove the
+_semi-confluency_.
+-/
+
+class SemiConfluent {X: Type} (R: Relation X) where
+  semi_confl: forall {m1 m2 m3}, R m1 m2 -> RTCl R m1 m3 -> exists m4, RTCl R m2 m4 /\ RTCl R m3 m4
+
+def Relation.semi_confl {X: Type} (R: Relation X) [inst: SemiConfluent R]
+  {m1 m2 m3} := inst.semi_confl (m1 := m1) (m2 := m2) (m3 := m3)
+
+
+/-!
+And of course, semi-confluency implies confluency.
+-/
+instance Relation.semi_confl_to_confl {X: Type} (R: Relation X)
+  [inst: SemiConfluent R]: Confluent R where
+  confl := by
+    intro m1 m2 m3
+    intro H12
+    revert m3
+    induction H12 with
+    | @refl x =>
+      intro m3 H13
+      exists m3
+      apply And.intro
+      . apply H13
+      . apply RTCl.refl
+    | @step m1 b m2 H1b Hb2 IH =>
+      intro m3 H13
+      let ⟨x, ⟨Hbx, H3x⟩⟩ := inst.semi_confl H1b H13
+      let ⟨m4, ⟨H24, Hx4⟩⟩ := IH Hbx
+      exists m4
+      apply And.intro
+      . apply H24
+      . apply Relation.trans H3x Hx4
+
+
+/-!
+Another variation of confluency is the Church-Rosser property. This time we use the
+equivalence closure, which will be more convenient to prove the uniqueness.
+-/
+
+
+class ChurchRosser {X: Type} (R: Relation X) where
+  church_rosser: forall {m2 m3},
+    ECl R m2 m3 -> exists m4, RTCl R m2 m4 /\ RTCl R m3 m4
+
+def Relation.church_rosser {X: Type} (R: Relation X) [inst: ChurchRosser R]
+  {m2 m3} := inst.church_rosser (m2 := m2) (m3 := m3)
+
+
+/-!
+And of course, confluency implies Church-Rosser property.
+-/
+
+instance Relation.confl_to_ChRo {X: Type} (R: Relation X)
+  [inst: Confluent R]: ChurchRosser R where
+  church_rosser := by
+    intro m2 m3 H
+    induction H with
+    | @inclusion a b Hab =>
+      apply inst.confl
+      . apply RTCl.refl
+      . apply R.super Hab
+    | @refl x =>
+      exists x
+      apply And.intro
+      . apply RTCl.refl
+      . apply RTCl.refl
+    | @trans a b c Hab Hbc IHab IHbc =>
+      let ⟨x, ⟨Hax, Hbx⟩⟩ := IHab
+      let ⟨y, ⟨Hby, Hcy⟩⟩ := IHbc
+      let ⟨m4, ⟨Hxm4, Hym4⟩⟩ := inst.confl Hbx Hby
+      exists m4
+      apply And.intro
+      . apply Relation.trans Hax Hxm4
+      . apply Relation.trans Hcy Hym4
+    | @symm a b Hab IHab =>
+      let ⟨m4, ⟨H1, H2⟩⟩ := IHab
+      exists m4
+
+
+/-!
+Finally, we prove the uniqueness from the Church-Rosser property.
+-/
+
+class Relation.NormalFormUnique {X} (R: Relation X) where
+  normal_formal_unique: forall {n m1 m2},
+    RTCl R n m1 -> RTCl R n m2 ->
+    R.Normal m1 -> R.Normal m2 ->
+    m1 = m2
+
+
+instance Relation.ChRo_normal_form_unique
+  {X: Type}
+  {R: Relation X}
+  [inst: Confluent R]
+: R.NormalFormUnique where
+  normal_formal_unique := by
+    intro n m1 m2
+    intro r1 r2 N1 N2
+    have ⟨m4, ⟨H14, H24⟩⟩ := inst.confl r1 r2
+    have E1 := N1.MNormal H14
+    have E2 := N2.MNormal H24
+    subst_eqs
+    eq_refl
+
+
+/-!
+### Exercise: 1 stars, standard, optional (Relation.ChRo_to_semi_confl)
+We can further prove that Church-Rosser property implies semi-confluency. Thus,
+semi-confluency, confluency and Church-Rosser property are all equivalent.
+-/
+theorem Relation.ChRo_to_semi_confl {X: Type} (R: Relation X)
+  [inst: ChurchRosser R]: SemiConfluent R where
+  semi_confl := by
+    intro m1 m2 m3 H12 H13
+    apply inst.church_rosser
+    apply Relation.trans (y := m1)
+    . sorry
+    . apply Relation.super (R := (RTCl R))
+      sorry
+
+/-!
+### Prove Semi-Confluency
+Finally, we only have to show `NatAdd.R2` satisfies the semi-confluency condition.
+The trick here is to find all possible _parallel calculations_. Suppose $m_1 \to m_2$
+and $m_1 \to_T m_3$. The reason that $m_1$ is reduced to two terms is that we have
+different ways to do the calculation. In order to find $m_4$, we have to perform both
+the calculation of $m_2$ and $m_3$. Thus, we can set $m_4$ to be the term with all
+possible _parallel calculations_ performed.
+
+We define this calculation as `NatAdd.partial_eval`.
+-/
+
+
+def NatAdd.partial_eval: NatAdd -> NatAdd
+  | .Z => .Z
+  | .S n => .S (n.partial_eval)
+  | .A n1 n2 => match n1 with
+    | .Z => n2.partial_eval
+    | .S m => .S (m.partial_eval + n2.partial_eval)
+    | o => o.partial_eval + n2.partial_eval
+
+
+/-!
+Besides, we need a relation `NatAdd.L` between `NatAdd.R2` and `RTCl NatAdd.R2` to hold
+the relation between a term and its `partial_eval`. This is less powerful than `RTCl`, so
+facts about it are easier to prove.
+-/
+
+inductive NatAdd.L: Relation NatAdd where
+  -- reflexivity
+  | Refl {x}: NatAdd.L x x
+  -- calculation
+  | ZAdd {n1 n2}: NatAdd.L n1 n2 -> NatAdd.L (.Z + n1) n2
+  | SAdd {m1 m2 n1 n2}: NatAdd.L m1 m2 -> NatAdd.L n1 n2 -> NatAdd.L (m1.S + n1) (m2 + n2).S
+  -- congruence
+  | SCong {m n}:  NatAdd.L m n ->  NatAdd.L m.S n.S
+  | AddCong {m1 m2 n1 n2}:  NatAdd.L m1 m2 ->  NatAdd.L n1 n2 ->  NatAdd.L (m1 + n1) (m2 + n2)
+
+instance: NatAdd.R2 sub_rel NatAdd.L where
+  inclusion := by
+    intro x y H
+    induction H with
+    | ZAdd =>
+      apply NatAdd.L.ZAdd
+      apply NatAdd.L.Refl
+    | SAdd =>
+      apply NatAdd.L.SAdd
+      . constructor
+      . constructor
+    | SCong H IH =>
+      apply NatAdd.L.SCong
+      exact IH
+    | AddCong1 H IH =>
+      apply NatAdd.L.AddCong
+      . exact IH
+      . constructor
+    | AddCong2 H IH =>
+      apply NatAdd.L.AddCong
+      . constructor
+      . exact IH
+
+
+abbrev NatAdd.MR2 := RTCl NatAdd.R2
+
+theorem NatAdd.MR2.s_cong: forall {m n: NatAdd}, m.MR2 n -> m.S.MR2 n.S := by
+  intro m n
+  apply RTCl.keep_cong
+  apply R2.SCong
+
+
+theorem NatAdd.MR2.add_cong {m1 m2 n1 n2: NatAdd}:
+  m1.MR2 m2 ->
+  n1.MR2 n2 ->
+  (m1 + n1).MR2 (m2 + n2)
+:= by
+  intro Hm Hn
+  apply Relation.trans (y := m1 + n2)
+  . apply RTCl.keep_cong
+    . apply R2.AddCong2
+    . exact Hn
+  . apply RTCl.keep_cong (f := fun x => x + n2)
+    . intro x y
+      apply R2.AddCong1
+    . exact Hm
+
+
+instance: NatAdd.L sub_rel NatAdd.MR2 where
+  inclusion := by
+    intro x y H
+    induction H with
+    | Refl =>
+      apply RTCl.refl
+    | ZAdd H IH =>
+      apply Relation.trans
+      . apply NatAdd.R2.super
+        apply NatAdd.R2.ZAdd
+      . exact IH
+    | @SAdd m1 m2 n1 n2 Hm Hn IHm IHn =>
+      apply Relation.trans (y := (m1 + n1).S)
+      . apply NatAdd.R2.super
+        constructor
+      . apply RTCl.keep_cong
+        . apply NatAdd.R2.SCong
+        . apply NatAdd.MR2.add_cong IHm IHn
+    | SCong H IH =>
+      apply RTCl.keep_cong
+      . apply NatAdd.R2.SCong
+      . exact IH
+    | @AddCong m1 m2 n1 n2 Hm Hn IHm IHn =>
+      apply NatAdd.MR2.add_cong IHm IHn
+
+
+instance: KeepCong NatAdd.L NatAdd.MR2 where
+  keep_cong := by
+    intro f cong
+    intro x y HMR2
+    induction HMR2 with
+    | refl =>
+      constructor
+    | @step x y z Hxy Hyz IH =>
+      apply Relation.trans (y := f y)
+      . apply NatAdd.L.super
+        apply cong
+        apply NatAdd.R2.super
+        exact Hxy
+      . exact IH
+
+
+theorem NatAdd.L.S_inverse: forall {m n: NatAdd}, m.S.L n.S -> m.L n := by
+  intro m n H
+  cases H with
+  | Refl =>
+    constructor
+  | SCong H =>
+    exact H
+
+
+theorem NatAdd.L.partial_eval: forall n: NatAdd, n.L n.partial_eval := by
+  intro n
+  induction n with
+  | Z =>
+    simp [NatAdd.partial_eval]
+    constructor
+  | S m IHm =>
+    simp [NatAdd.partial_eval]
+    apply L.SCong
+    exact IHm
+  | A n1 n2 IHn1 IHn2 =>
+    cases n1 with (simp [NatAdd.partial_eval] at *)
+    | Z =>
+      apply L.ZAdd IHn2
+    | S =>
+      let IHn1 := L.S_inverse IHn1
+      apply L.SAdd
+      . exact IHn1
+      . exact IHn2
+    | A =>
+      apply L.AddCong
+      . exact IHn1
+      . exact IHn2
+
+
+theorem NatAdd.L.partial_eval_left: forall m n: NatAdd, m.L n -> n.L m.partial_eval := by
+  intro m n HR
+  induction HR with
+  | Refl =>
+    apply L.partial_eval
+  | ZAdd H IH =>
+    simp [NatAdd.partial_eval]
+    exact IH
+  | SAdd Hm Hn IHm IHn =>
+    simp [NatAdd.partial_eval]
+    apply L.SCong
+    apply L.AddCong
+    . exact IHm
+    . exact IHn
+  | @SCong m n H IH =>
+    simp [NatAdd.partial_eval]
+    apply L.SCong
+    exact IH
+  | @AddCong m1 m2 n1 n2 Hm Hn IHm IHn =>
+    cases m1 with (simp [NatAdd.partial_eval] at *)
+    | Z =>
+      cases Hm
+      apply L.ZAdd
+      exact IHn
+    | S t =>
+      cases Hm with
+      | Refl =>
+        apply L.SAdd
+        . apply L.partial_eval
+        . exact IHn
+      | SCong =>
+        apply L.SAdd
+        let IHm := L.S_inverse IHm
+        . exact IHm
+        . exact IHn
+    | A =>
+      apply AddCong
+      . exact IHm
+      . exact IHn
+
+
+theorem NatAdd.L.partial_eval_cong: forall m n: NatAdd,
+  m.L n -> m.partial_eval.L n.partial_eval
+:= by
+  intros m n H
+  apply NatAdd.L.partial_eval_left
+  apply H.partial_eval_left
+
+
+instance NatAdd.R2.semi_confl: SemiConfluent NatAdd.R2 where
+  semi_confl := by
+    intro m1 m2 m3 H12 H13
+    exists m3.partial_eval
+    constructor
+    . -- m2.MR2 m3.partial_eval
+      apply Relation.trans (y := m1.partial_eval)
+      . -- m2.MR2 m1.partial_eval
+        apply L.super  -- `RTCl R2` is a super-relation of `L`
+        apply L.partial_eval_left
+        apply R2.super
+        exact H12
+      . -- m1.partial_eval.MR2 m3.partial_eval
+        apply L.keep_cong
+        . apply L.partial_eval_cong
+        . exact H13
+    . -- m3.MR2 m3.partial_eval
+      apply L.super
+      apply L.partial_eval
