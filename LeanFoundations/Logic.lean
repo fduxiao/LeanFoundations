@@ -16,9 +16,6 @@ import LeanFoundations.Logic.ProofObjects
 import LeanFoundations.Logic.IndPrinciples
 import LeanFoundations.Logic.Typeclass
 import LeanFoundations.Logic.Rel
-import LeanFoundations.Logic.Imp
-import LeanFoundations.Logic.ImpParser
-import LeanFoundations.Logic.ImpCEvalFun
 
 
 /-TOC-/
@@ -36,9 +33,6 @@ import LeanFoundations.Logic.ImpCEvalFun
 - `LeanFoundations.Logic.IndPrinciples`: Induction principles
 - `LeanFoundations.Logic.Typeclass`: Syntactic sugar to describe common behavior
 - `LeanFoundations.Logic.Rel`: Relations and their properties
-- `LeanFoundations.Logic.Imp`: Simple imperative programs
-- `LeanFoundations.Logic.ImpParser`: Lexing and parsing in Lean
-- `LeanFoundations.Logic.ImpCEvalFun`: Evaluation function for Imp
 - Make a small DSL for arithmetic and compile it to a stack calculator
 - Monad and IO and generate some json representing the stack calculator
 - Meta-programming: notation, syntax, macro, elaborations.

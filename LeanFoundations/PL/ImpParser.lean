@@ -7,7 +7,7 @@ This file is a Lean 4 translation of the "Lexing and Parsing in Lean" chapter fr
 Software Foundations (Logical Foundations).
 -/
 
-import LeanFoundations.Logic.Imp
+import LeanFoundations.PL.Imp
 
 /-!
 # Lexing and Parsing in Lean

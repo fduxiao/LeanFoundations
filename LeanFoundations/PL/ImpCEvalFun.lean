@@ -7,7 +7,7 @@ This file is a Lean 4 translation of the "Evaluation Function for Imp" chapter f
 Software Foundations (Logical Foundations).
 -/
 
-import LeanFoundations.Logic.ImpParser
+import LeanFoundations.PL.ImpParser
 
 /-!
 # Evaluation Function for Imp
