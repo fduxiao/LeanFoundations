@@ -9,9 +9,9 @@ import LeanFoundations.Logic.Induction
 import LeanFoundations.Logic.Lists
 import LeanFoundations.Logic.Polymorphism
 import LeanFoundations.Logic.Tactics
-import LeanFoundations.Logic.PropLogic
 import LeanFoundations.Logic.IndProp
 import LeanFoundations.Logic.Maps
+import LeanFoundations.Logic.PropLogic
 import LeanFoundations.Logic.ProofObjects
 import LeanFoundations.Logic.IndPrinciples
 import LeanFoundations.Logic.Typeclass
@@ -25,11 +25,11 @@ import LeanFoundations.Logic.Rel
 - `LeanFoundations.Logic.Induction`: Proof by induction
 - `LeanFoundations.Logic.Lists`: Structured data
 - `LeanFoundations.Logic.Polymorphism`: Polymorphism
-- `LeanFoundations.Logic.Tactics`: More basic tactics
-- `LeanFoundations.Logic.PropLogic`: Propositional Logic
+- `LeanFoundations.Logic.Tactics`: More basic tactics and logic connectives
 - `LeanFoundations.Logic.IndProp`: Inductively defined propositions
-- `LeanFoundations.Logic.Maps`: Total and partial maps
+- `LeanFoundations.Logic.PropLogic`: Propositional Logic
 - `LeanFoundations.Logic.ProofObjects`: The Curry-Howard correspondence
+- `LeanFoundations.Logic.Maps`: Total and partial maps
 - `LeanFoundations.Logic.IndPrinciples`: Induction principles
 - `LeanFoundations.Logic.Typeclass`: Syntactic sugar to describe common behavior
 - `LeanFoundations.Logic.Rel`: Relations and their properties

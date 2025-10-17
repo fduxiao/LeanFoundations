@@ -4,7 +4,6 @@ Released under MIT license as described in the file LICENSE.
 Authors: Xiao Tan
 -/
 
-
 /-!
 # More Basic Tactics
 We are going to lean more tactics. We first inspect more on the *implications*.
@@ -22,7 +21,7 @@ a proposition of the form *if `A` then `B`*, written as `A -> B` in Lean. We cal
 `A` the antecedent (condition) and `B` the consequent (conclusion) of `A -> B`.
 As we learned before, to prove such a `theorem` in Lean, we `intro` the
 antecedent `A` into the *context*, and try to fulfil goal `B`.
-Here, we have to two questions:
+Here, we have to answer two questions:
 1. How to yield the `A -> B`, or how to yield `B` under the *context* `A`;
 2. How to make use of the implication `A -> B`.
 
@@ -43,8 +42,10 @@ example: 1 = 2 -> 0 = 0 := by
   eq_refl
 
 /-!
-You can also add more unnecessary conditions (recall `->` is right
-associative just like *curried functions*)
+You can also add more unnecessary conditions (recall `->` is right associative just like
+*curried functions*). The following is considered as an implication from `1 = 2` to
+`3 = 4 -> (7 = 8 -> 0 = 0)`. Your antecedents and consequents can also be of this implicational
+form.
 -/
 example:
   1 = 2 ->
@@ -52,9 +53,12 @@ example:
   7 = 8 ->
   0 = 0
 := by
-  -- you can introduce them with `intro`,
-  intro H1
-  -- or with one `intros` to bring in them all if you don't care the names.
+  -- You first the antecedent.
+  intro H1  -- `H1: 1 = 2`
+  -- And the target is `3 = 4 -> 7 = 8 -> 0 = 0`.
+  -- To prove it, you just do another `intro`.
+  intro H2  -- `H2: 3 = 4`
+  -- Or with one `intros` to bring in them all if you don't care the names.
   intros
   eq_refl
 
@@ -69,7 +73,7 @@ theorem ModusPones: forall A B: Prop,  -- indicating we are dealing with proposi
   (A -> B) ->
   B
 := by
-  intro A B  -- We bring A B into premises.
+  intro A B  -- We bring A B into premises. (You can do that with in one `intro`.)
   intro HA HAB  -- Then, we have two facts: `A` and `A -> B`.
   apply HAB  -- This turns the goal into `A`.
   apply HA  -- And `A` is already known.
@@ -211,7 +215,7 @@ example:
 
 /-!
 ### Proofs inside Proofs
-As you may imagine, we may have a very complicated implicational proof. For
+As you have seen before, we may have a very complicated implicational proof. For
 example, `A -> (A -> B) -> (B -> C) -> (B -> D) -> (B -> C -> D -> E) -> E`.
 Certainly, you can prove it just with `apply` and `intro`.
 -/
@@ -272,6 +276,55 @@ example (A B C D E: Prop):
     apply Hbd
     exact Hb
 
+/-!
+> You may also use the `by` for `let`. The behaviors of them are nearly the same.
+> There exists some small differences between them. If you define a new variable by `let`,
+> Lean will then keep track of the equality of the definition. For example, you cannot
+> prove the following with `have`.
+> ```lean
+> example (x y: Nat):
+>   (forall t, t = 0 -> t = 1) ->
+>   x + y = 0 ->
+>   x + y = 1
+> := by
+>   intro H
+>   have t := x + y
+>   apply H t
+> ```
+> Instead, you have to use `let` in this case.
+-/
+
+example (x y: Nat):
+  (forall t, t = 0 -> t = 1) ->
+  x + y = 0 ->
+  x + y = 1
+:= by
+  intro H
+  let t := x + y
+  apply H t
+
+
+
+/-!
+### Automation by elimination
+If a proposition only involves implication, there exists some [algorithm][statman1979intuitionistic]
+to determine whether it is correct or not. Lean provides such a tactic.
+-/
+example (A B C D E: Prop):
+  A ->
+  (A -> B) ->
+  (B -> C) ->
+  (B -> D) ->
+  (D -> E) ->
+  E
+:= by
+  intros
+  solve_by_elim
+
+/-!
+> you have to specify the depth when using the tactic to prove some complicated proposition. See
+> [here](https://lean-lang.org/doc/reference/latest/Tactic-Proofs/Tactic-Reference/#solve_by_elim).
+-/
 
 /-!
 ## Conjuctions and Disjunctions
@@ -286,6 +339,11 @@ dealing with logical connectives:
   tactics we shall use.
 - Elimination rule: given such a proposition, how to use it to prove other things,
   i.e., how to remove the connective to get new proofs.
+
+> Moreover, those rules are written in an implicational form. You can imagine this as
+> if we only have implications, and those propositions made by other connectives are
+> variables with axioms to construct them or eliminate them. See [System F][girard1989proofs].
+> You will see this in the following.
 -/
 
 /-!
@@ -384,25 +442,88 @@ example (A B C: Prop): (A ∧ B -> C) -> (A -> B -> C) := by
 
 /-!
 ### If and Only If
+If you want to prove two propositions are equivalent to each other, you have to prove them in
+both directions. Lean uses the logic connection `<->` or `↔`(`\iff`) to _introduce_ it, while
+the constructor of it split the goal into the two directions. For example, the following.
+-/
+example {A B C: Prop}:
+  (A -> B) ->
+  (B -> C) ->
+  (C -> A) ->
+  (A <-> C)
+:= by
+  intro Hab Hbc Hca
+  apply Iff.intro  -- or `constructor`
+  . intro a
+    apply Hbc
+    apply Hab
+    exact a
+  . exact Hca
+
+/-!
+To make use of an `Iff`, for example `H: A <-> B`, Lean provides us `H.mp: A -> B` and
+`H.mpr: B -> A`, which are just implications.
 -/
 
 /-!
 ### Disjuction
+The next target is _A or B_ () for two propositions A B. Again, we give the three rules.
+The introduction rule is straightforward: If `A: Prop` and `B: Prop`, we know `A ∨ B: Prop`.
+(You can use `A \/ B` or `Or A B`). Then, I give the _intuitionistic_ construction rule for
+disjunction: to find a proof of `A ∨ B`, you should either prove `A` or `B`. They are represented
+by constructors `Or.inl` and `Or.inr`.
 -/
+example (x: Nat):
+  x = 3 -> x = 3 ∨ x = 5
+:= by
+  intro H
+  apply Or.inl
+  exact H
+
+/-!
+Or you can use `left` and `right` tactics.
+-/
+example (x: Nat):
+  x = 3 -> x = 3 ∨ x = 5
+:= by
+  intro H
+  left
+  exact H
 
 
 /-!
-elimination rule of `∨`: forall {A B C}, (A -> C) -> (B -> C) -> (A ∨ B -> C)
+The elimination rule of `∨` is a bit obscure. It is an implication of type
+`forall {A B C: Prop}, (A -> C) -> (B -> C) -> (A ∨ B -> C)`. Let us spell it out for you.
+
+From the type, we know it involves three propositions `A,B,C`; then, if we know `A -> C` and
+`B -> C`, we can get `C` from `A ∨ B`. This means if you want to utilize `A ∨ B`, you have
+to do the cases analysis: when we know `A`, we can prove `C`; when we know `B`, we can prove
+`C`; thus we know `C`. In Lean, we still use the tactic `cases`.
 -/
 
-/-!
-## Injection and Discrimination
+example (P Q : Prop) : P ∨ Q → Q ∨ P := by
+  intro H
+  cases H with
+  | inl HP =>
+    right
+    exact HP
+  | inr HQ =>
+    left
+    exact HQ
 
-Recall the definition of Nat
+/-!
+## Injection and Disjointness
+Recall the definition of `Nat`.
 ```lean
 inductive Nat where
-  | zero | succ
+  | zero | succ: Nat -> Nat
 ```
+Each (_closed_) term `t: Nat` must be a zero or the successor of another `Nat`. Besides, the
+`inductive` definition also suggests that `succ` should be injective and the two cases `zero, succ`
+should be _disjoint_. (For a naive understanding of that, refer to [System F][girard1989proofs].)
+
+The injectivity is that if `a.succ = b.succ` for some `a, b: Nat`, then `a = b`. We formalize it
+as follows.
 -/
 
 namespace scratch
@@ -419,17 +540,142 @@ end scratch
 
 
 /-!
-## Falsehood and Negation
+The above is proved by the `pred` func. Since the same behavior always exists for any inductive
+type, Lean provides the `injection` tactics. We use `injection H with H1 H2 ...` if we can obtain
+more than one equalities from `H`.
 -/
+example (a b: Nat): a.succ = b.succ -> a = 3 -> b = 3 := by
+  intro H
+  injection H with H'
+  rewrite [H']
+  solve_by_elim
+
+
+example (x y: Nat) (xs ys: List Nat):
+  x :: xs = y :: ys ->
+  x = y ∧ xs = ys
+:= by
+  intro H
+  injection H with H1 H2
+  solve_by_elim  -- it also tries to use a constructor
+
+
+/-!
+Lean also allows you to do the simplification for this situation.
+-/
+example (x y: Nat) (xs ys: List Nat):
+  x :: xs = y :: ys ->
+  x = y ∧ xs = ys
+:= by
+  intro H
+  simp at H
+  exact H
+
+/-!
+The disjointness part is even simpler. It simply says you should not have something like
+`n.succ = zero`. From the definition of `Nat`, it is impossible to prove some `n.succ = zero`.
+Then, the only case is what if we have some `n.succ = zero`. In this situation, since we have
+some contradiction, we do not need to prove any longer. Lean provides a tactic `contradiction`
+for this situation.
+-/
+example: 1 = 0 -> 3 = 4 := by
+  intro H
+  contradiction
+
+
+/-!
+You can also use a `simp` at `H`.
+-/
+example: 1 = 0 -> 3 = 4 := by
+  intro H
+  simp at H
+
+
+/-!
+## Falsehood and Negation
+In the previous situation, we see that if we have some contradiction, then we can stop the
+proof. The contradiction is often met with when you are using _proof by contradiction_ or
+_proof by cases_. In either cases, we may think of the final goal as proved by the contradiction.
+This logic rule is known as _EFQ_ ([ex falso (sequitur) quodlibet](https://ncatlab.org/nlab/show/ex+falso+quodlibet)).
+
+The contradiction may casued by many reasons. In general, we use the _falsehood_ `False` in Lean
+to represent a contradiction. It is a constant proposition (a nullary logical connective) with no
+constructors meaning that it is impossible to have a prove of this type. The elimination of it is
+exactly the rule _EFQ_. Still, we use `contradiction` to conclude the goal.
+-/
+
+#check False
+
+example: False -> 1 = 2 := by
+  intros
+  contradiction
+
+-- And, you can prove `False` itself from contradiction.
+example: 0 = 1 -> False := by
+  intros
+  contradiction
+
+
+/-!
+We also use the falsehood to encode _negation_. If we have a proposition `A` and its
+negation `¬ A` (`Not A`), then we should be able to get the contradiction. So, the negation
+is an implication `A -> False`.
+-/
+example (A: Prop): A -> ¬ A -> False := by
+  intro H N
+  apply N
+  exact H
+
+
+/-!
+Lean also allows you to turn the goal into the contradiction `False`, so instead the goal,
+you only have to prove the contradiction. This is the tactic `exfalso`.
+-/
+
+example (A: Prop): A -> ¬ A -> 1 = 2 := by
+  intro H N
+  exfalso
+  apply N
+  exact H
+
+
+/-!
+## Trivial Truth
+We also have a trivial `True` proposition, provable by tactic `trivial`. It is a proposition with
+a single naive constructor.
+-/
+
+example: True := by
+  trivial
+
+/-!
+Since the only way to prove it is the triviality, we usually obtain nothing from it. This proposition
+seems useless, but it provides some theoretic usage, e.g., it is the terminal object in the
+category of all propositions. We will soon see [some application](LeanFoundations.Logic.IndProp.html) of it.
+-/
+
 
 /-!
 ## Existential Quantification
 -/
 
+
 /-!
-## Tactics on Hypotheses
+## Other useful tactics
+-/
+/-!
+### Tactics on Hypotheses
 -/
 
 /-!
-## Unfolding
+### Unfolding
+-/
+
+/-!
+### Generalizing
+-/
+
+
+/-!
+### Conv and Calc
 -/
