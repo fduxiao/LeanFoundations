@@ -333,9 +333,9 @@ section, we can find that to make an *implication*, we first `intro` its anteced
 into the context and prove the consequent; if we want to make use of it, we
 `apply` it and prove the antecedent. This shows the general principles of
 dealing with logical connectives:
-- Introduction rule: given two propositions, how to make a new proposition from
+- Formation rule: given two propositions, how to make a new proposition from
   the connective.
-- Construction rule: in order to prove a proposition made of this connective, what
+- Construction/Introduction rule: in order to prove a proposition made of this connective, what
   tactics we shall use.
 - Elimination rule: given such a proposition, how to use it to prove other things,
   i.e., how to remove the connective to get new proofs.
@@ -351,7 +351,7 @@ dealing with logical connectives:
 Here, we use `And(∧)` as an example to explain that. Sometimes, we may want to
 prove talk about two facts, e.g., `1 = 1 ∧ 2 = 2`. Two propositions `1 = 1` and
 `2 = 2` are connected by an `∧`. Or equivalently, you can use `And (1 = 1) (2 = 2)`.
-This shows us the *introduction rule*: `And` takes two propositions and yields
+This shows us the *formation rule*: `And` takes two propositions and yields
 another. You can think of that as a function of type `Prop -> Prop -> Prop`.
 -/
 #check And  -- And (a b : Prop) : Prop
@@ -360,7 +360,7 @@ another. You can think of that as a function of type `Prop -> Prop -> Prop`.
 Then, we ask how to prove `1 = 1 ∧ 2 = 2`. Intuitively, to prove an `And` of
 `A` and `B`, we have to prove both `A` and `B`. This is the *construction
 rule*, which can be considered as a function of type `A -> B -> A ∧ B`.
-Lean provides a term `And.intro` for it, and it is called the *constructor*.
+Lean provides a term `And.intro` for it, and it is called the *constructor* of `And`.
 -/
 
 #check And.intro
@@ -443,7 +443,7 @@ example (A B C: Prop): (A ∧ B -> C) -> (A -> B -> C) := by
 /-!
 ### If and Only If
 If you want to prove two propositions are equivalent to each other, you have to prove them in
-both directions. Lean uses the logic connection `<->` or `↔`(`\iff`) to _introduce_ it, while
+both directions. Lean uses the logic connection `<->` or `↔`(`\iff`) to _form_ it, while
 the constructor of it split the goal into the two directions. For example, the following.
 -/
 example {A B C: Prop}:
@@ -468,7 +468,7 @@ To make use of an `Iff`, for example `H: A <-> B`, Lean provides us `H.mp: A -> 
 /-!
 ### Disjuction
 The next target is _A or B_ () for two propositions A B. Again, we give the three rules.
-The introduction rule is straightforward: If `A: Prop` and `B: Prop`, we know `A ∨ B: Prop`.
+The formation rule is straightforward: If `A: Prop` and `B: Prop`, we know `A ∨ B: Prop`.
 (You can use `A \/ B` or `Or A B`). Then, I give the _intuitionistic_ construction rule for
 disjunction: to find a proof of `A ∨ B`, you should either prove `A` or `B`. They are represented
 by constructors `Or.inl` and `Or.inr`.
@@ -656,19 +656,124 @@ category of all propositions. We will soon see [some application](LeanFoundation
 
 
 /-!
-## Existential Quantification
+## Predicates and Existential Quantification
+We have seen the behavior of the universal quantifier. What about its
+[adjoint counter part][simmons2011introduction], the existential quantifier?
+Certainly, Lean provides it. To make an existential proposition, you have to first give
+a predicate.
+
+Mathematically, a predicate $P$ on natural numbers $ℕ$ is a bunch of propositions for each
+number $x∈ℕ$. For example, given a number $x∈ℕ$, we can ask whether $x = 0$ or not. This is
+to say that for each $x$, we make a proposition $x = 0$. In other words, it is a function from
+natural numbers to `Prop`. In Lean, we encode a predicate on some type `A` simply as a function
+from `A` to `Prop`.
 -/
+
+def isZero: Nat -> Prop := fun n => n = 0
+
+/-!
+And you can define predicates on more than one term. For example, the a predicate on two terms
+of type `A` is called a _relation_ on `A`.
+-/
+def isDouble (n x: Nat): Prop := n = 2 * x
+
+/-!
+> This also blurs the distinction between terms and types. We do not just map terms to terms
+> or as above, map propositions to propositions, but also map terms to propositions/types or even
+> types to terms!
+
+
+Now, for a predicate `P: T -> Prop` on some type `T`, we add the existential quantifier to get
+a new proposition `∃ x: T, P x: Prop` (Or `Exists P` in Lean).
+-/
+
+#check ∃ x: Nat, isZero x
+#check Exists isZero
+
+
+/-!
+To prove such a proposition, we have to provide the information of the `x` and the information
+of the proof `P x`. This is the _intuitionistic_ construction rule of `Exists`. In Lean, the
+constructor is `Exists.intro`.
+
+> The type of it is a bit cumbersome. You can try `#check Exists.intro`. It will show a lot of
+> implicit parameters. Those effective ones are exactly a term `x: T` and a proof `P x`. See
+> the following example.
+-/
+
+example: ∃ x: Nat, isZero x := by
+  have H: isZero 0 := by
+    -- Use tactic `unfold` to spell out a definition.
+    unfold isZero
+    eq_refl
+  apply Exists.intro 0 H
+
+
+/-!
+Lean provides the tactic `exists x` to specify the element `x`, turning the goal to
+`P x`. Lean also tries to
+[close (prove) the goal by some trivial facts](https://lean-lang.org/doc/reference/latest/Tactic-Proofs/Tactic-Reference/#exists).
+-/
+example: ∃ x: Nat, isZero x := by
+  exists 0
+
+
+-- or some more complicated ones
+example (m n : Nat) : n = 4 + m -> (∃ o, n = 2 + o) := by
+  intro H
+  exists 2 + m
+  rewrite [H]
+  rewrite [<-Nat.add_assoc]
+  eq_refl
+
+
+/-!
+You can also use the `constructor` tactic without specifying the term. Lean will then ask you
+for a proof of the predicate, and try to figure the term automatically.
+-/
+
+example: ∃ x: Nat, isZero x := by
+  constructor
+  unfold isZero
+  eq_refl
+
+
+/-!
+To make use of an existential proposition, we again uses `cases` to decompose the only
+`Exists.intro` case.
+-/
+example (n : Nat) : (∃ m, n = 4 + m) → (∃ o, n = 2 + o) := by
+  intro H
+  cases H with
+  | intro m Hm =>
+    exists 2 + m
+    -- `rw` is the same as `rewrite`, but it also tries to close the goal if it is some trival facts.
+    rw [Hm]
+    rw [<-Nat.add_assoc]
+
+
+/-!
+Or, we can use one `let` to decompose the pair.
+-/
+example (n : Nat) : (∃ m, n = 4 + m) → (∃ o, n = 2 + o) := by
+  intro H
+  let ⟨m, Hm⟩ := H
+  exists 2 + m
+  -- `rw` is the same as `rewrite`, but it also tries to close the goal if it is some trivial facts.
+  rw [Hm]
+  rw [<-Nat.add_assoc]
 
 
 /-!
 ## Other useful tactics
 -/
-/-!
-### Tactics on Hypotheses
--/
 
 /-!
-### Unfolding
+### Tactics on Hypotheses
+- specialize
+- replace
+- rcases
+- split
 -/
 
 /-!
