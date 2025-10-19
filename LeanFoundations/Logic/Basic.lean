@@ -5,7 +5,8 @@ Authors: Xiao Tan and Robert Joseph George
 
 -/
 
-import LeanFoundations.Logic.MyTactics  -- some auxiliary tactics.
+-- Ignore the next line if this is the first time you learn Lean.
+import LeanFoundations.Logic.MyTactics
 
 
 /-!
@@ -155,6 +156,30 @@ namespace classical
   axiom em: forall (p: Prop), p ∨ ¬ p
 
 end classical
+
+/-!
+### Section
+
+After you `open` a namespace, you are unable to `close` it. To limit the side effect of
+an `open`, you can put it inside a `section`.
+-/
+
+section
+open scratch
+
+-- do something with scratch
+#check Bool
+end
+
+/-! You can also give a name to a section -/
+section WeNeedScratchHere
+open scratch
+
+-- do something with scratch
+#check Bool
+end WeNeedScratchHere
+
+
 
 /-!
 ## Define functions by case analysis

@@ -27,9 +27,9 @@ import LeanFoundations.Logic.Rel
 - `LeanFoundations.Logic.Polymorphism`: Polymorphism
 - `LeanFoundations.Logic.Tactics`: More basic tactics and logic connectives
 - `LeanFoundations.Logic.IndProp`: Inductively defined propositions
+- `LeanFoundations.Logic.Maps`: Total and partial maps
 - `LeanFoundations.Logic.PropLogic`: Propositional Logic
 - `LeanFoundations.Logic.ProofObjects`: The Curry-Howard correspondence
-- `LeanFoundations.Logic.Maps`: Total and partial maps
 - `LeanFoundations.Logic.IndPrinciples`: Induction principles
 - `LeanFoundations.Logic.Typeclass`: Syntactic sugar to describe common behavior
 - `LeanFoundations.Logic.Rel`: Relations and their properties

@@ -6,11 +6,13 @@ Authors: Xiao Tan
 
 /-!
 # More Basic Tactics
-We are going to lean more tactics. We first inspect more on the *implications*.
+We are going to lean more tactics in this chapter. We first inspect more on the *implications*.
 Then, we move to how to prove and make use of conjuction and disjuncitons. Then,
 we discuss the injection and discrimination on inductive types. Finally,
 we look at tactics on hypothesis and unfolding, and other useful tactics.
 -/
+
+namespace MoreBasicTactics
 
 /-!
 ## Implications and Tactic Apply
@@ -110,7 +112,7 @@ example:
   (1 = 2 -> 3 = 4) ->
   3 = 4
 := by
-  intros H1 H2
+  intro H1 H2
   apply ModusPones (A := 1 = 2) (B := 3 = 4)
   . apply H1
   . apply H2
@@ -417,13 +419,13 @@ complicated things in a proof.
 -/
 
 example (A B C: Prop): (A -> B ∧ C) -> (A -> B) ∧ (A -> C) := by
-  intros c
+  intro c
   constructor  -- split the goals
   . -- A -> B
-    intros a
+    intro a
     exact (c a).left
   . -- A -> C
-    intros a
+    intro a
     exact (c a).right
 
 
@@ -765,22 +767,587 @@ example (n : Nat) : (∃ m, n = 4 + m) → (∃ o, n = 2 + o) := by
 
 
 /-!
-## Other useful tactics
+## Tactics on Hypotheses
+We finially look at some other useful tactics. The first ones are the tactics on the context, i.e.,
+the hypotheses. In most of previous examples, we used a tactic mainly to prove a goal/turning a
+goal. Certainly we want to change a hypothesis in the context. For example, `let`/`have` is one
+way to do that: if you have `H: A -> B` and `a: A`, you can make a new hypothesis by
+`let H' := H a` in the context. You can refer to the [Lean documents](https://lean-lang.org/doc/reference/latest/Tactic-Proofs/Tactic-Reference/#tactic-ref)
+for a comprehensive list of tactics.
 -/
 
 /-!
-### Tactics on Hypotheses
-- specialize
-- replace
-- rcases
-- split
+### revert and rename
+We can `intro` a hypothesis or use `intros` to introduce a lot of hypotheses with names.
+We can also "put back" a hypothesis by `revert` tactic.
+-/
+example {A B C: Prop}: (A -> B -> C) -> (B -> A -> C) := by
+  -- goal is `(A -> B -> C) -> (B -> A -> C)`
+  intro H Hb Ha
+  -- goal is `C`
+  revert Hb
+  -- goal is `B -> C`
+  revert Ha
+  -- goal is `A -> B -> C`
+  exact H
+
+
+/-!
+You can use this to _rename_ a variable
+-/
+example {A: Prop} (BadName: A): A := by
+  revert BadName
+  intro GoodName
+  apply GoodName
+
+/-!
+This works well, but if you introduce the hypotheses with `intros`, you are unable to rename them
+in such a way, because you do not even have the names (they are tagged with a `†`). Lean provides
+a tactic `rename` for you to do that. You only have to specify the type of the hypothesis.
+-/
+example (A B: Prop): A -> B -> A := by
+  intros
+  rename A => Ha
+  exact Ha
+
+/-!
+Or, if you don't want to write down a long type, you can rename a hypothesis by counting,
+i.e., `rename_i`
+-/
+example (A B: Prop): A -> B -> A := by
+  intros
+  rename_i Ha Hb
+  exact Ha
+
+/-!
+You can `clear` a hypothesis if you don't like it.
+-/
+example (A B: Prop): A -> B -> A := by
+  intros
+  rename_i Ha Hb
+  clear Hb
+  exact Ha
+
+/-!
+For such a case, you can use the wildcard `_` for unwanted names.
+-/
+example (A B: Prop): A -> B -> A := by
+  intros
+  rename_i Ha _
+  exact Ha
+
+/-!
+You can even ask Lean to decide which hypothesis to use by `assumption`.
+-/
+example (A B: Prop): A -> B -> A := by
+  intros
+  assumption
+
+
+/-!
+### replace and specialize
+In the cases of `have`/`let`, you can use an existing name of some hypothesis.
+-/
+example (A B C: Prop): (A -> B -> C) -> B -> A -> C := by
+  intro H Hb Ha
+  let H := H Ha
+  let H := H Hb
+  exact H
+
+/-!
+In this case, you can see that the old name becomes unaccessible (with a `†` after it).
+If you don't want to preserve the old names, you can use `replace` instead of `let`.
+-/
+example (A B C: Prop): (A -> B -> C) -> B -> A -> C := by
+  intro H Hb Ha
+  replace H := H Ha
+  replace H := H Hb
+  exact H
+
+/-!
+And if the `replace` is just some application, Lean provides `specialize` for a simpler
+expression.
+-/
+example (A B C: Prop): (A -> B -> C) -> B -> A -> C := by
+  intro H Hb Ha
+  specialize H Ha Hb
+  exact H
+
+
+/-!
+## Tactics for Multiple goals
+When we are manipulating the goal, we may probably get more (sub-)goals, e.g., by applying an
+implication with multiple premises. We then talk about tactics for those situations.
 -/
 
 /-!
-### Generalizing
+### Bullets and Applying to all
+Recall the following example.
 -/
+example:
+  1 = 2 ->
+  (1 = 2 -> 3 = 4) ->
+  3 = 4
+:= by
+  intro H1 H2
+  apply ModusPones (A := 1 = 2) (B := 3 = 4)
+  . apply H1
+  . apply H2
 
 
 /-!
-### Conv and Calc
+Here, the `.` is a bullet that helps us to organize the goals. After we apply the
+`ModusPones (A := 1 = 2) (B := 3 = 4)`, we have to solve two goals that are the premises
+in the definition of `ModusPones`. This is unnecessary in Lean. You can just list the tactics
+and Lean will try them in turn. If some tactics close one goal, then Lean sets the goal to
+the next one and applies the following tactics. For example, the following.
 -/
+
+example:
+  1 = 2 ->
+  (1 = 2 -> 3 = 4) ->
+  3 = 4
+:= by
+  intro H1 H2
+  apply ModusPones (A := 1 = 2) (B := 3 = 4)
+  apply H1
+  apply H2
+
+/-!
+In this way, the proof is less readable, so why Lean is designed like this?. One answer could
+be that bullets are helpful for a human, while omitting them could be helpful for automation.
+For example, the two goals after `apply` can both be closed by `assumption`.
+-/
+example:
+  1 = 2 ->
+  (1 = 2 -> 3 = 4) ->
+  3 = 4
+:= by
+  intro H1 H2
+  apply ModusPones (A := 1 = 2) (B := 3 = 4)
+  assumption
+  assumption
+
+/-!
+In this case, we use `all_goals` to apply a tactic to all goals.
+-/
+example:
+  1 = 2 ->
+  (1 = 2 -> 3 = 4) ->
+  3 = 4
+:= by
+  intro H1 H2
+  apply ModusPones (A := 1 = 2) (B := 3 = 4)
+  all_goals assumption
+
+
+/-!
+You can also use the `<;>` notation to propagate a tactic to all goals. You can concatenate
+more than one goals and Lean will apply them as long as each goal is not closed. This will
+be helpful when we are making our own tactics.
+-/
+example:
+  1 = 2 ->
+  (1 = 2 -> 3 = 4) ->
+  3 = 4
+:= by
+  intro H1 H2
+  apply ModusPones (A := 1 = 2) (B := 3 = 4)
+    <;> assumption
+
+
+/-!
+### case and next
+We have seen the `cases` (including `induction`) tactic that helps us with case analysis or
+decomposing a term/proof. Usually, we write the `| _ =>` notation to enumerate all cases.
+In Lean, you can also omit that or use the bullets.
+-/
+
+example (n: Nat): n = 0 ∨ n ≠ 0 := by
+  -- `n ≠ 0` is `¬ n = 0`, i.e. `n = 0 -> False`
+  cases n  -- without the `with` clause
+  . -- this is case `zero`
+    left
+    eq_refl
+  . -- this is case `succ`
+    right
+    intro contra
+    contradiction
+
+
+/-!
+You can also use `case =>` clause to specify which case you want to focus.
+-/
+example (n: Nat): n = 0 ∨ n ≠ 0 := by
+  -- `n ≠ 0` is `¬ n = 0`, i.e. `n = 0 -> False`
+  cases n  -- without the `with` clause
+  case succ =>  -- Now, we first deal with the `succ` case
+    right
+    intro contra
+    contradiction
+  case zero => -- this is case `zero`
+    left
+    eq_refl
+
+/-!
+You can even use them mixedly.
+-/
+example (n: Nat): n = 0 ∨ n ≠ 0 := by
+  -- `n ≠ 0` is `¬ n = 0`, i.e. `n = 0 -> False`
+  cases n  -- without the `with` clause
+  case succ =>  -- Now, we first deal with the `succ` case
+    right
+    intro contra
+    contradiction
+  . -- this is case `zero`
+    left
+    eq_refl
+
+
+/-!
+You may have noticed that in the cases `succ`, we have one more hypothesis
+`n†: Nat`. As in the use of `with`, you can specify the names of them.
+-/
+example (n: Nat): n = 0 ∨ n ≠ 0 := by
+  -- `n ≠ 0` is `¬ n = 0`, i.e. `n = 0 -> False`
+  cases n  -- without the `with` clause
+  case succ n' =>  -- the case when `n` is `n'.succ`
+    right
+    intro contra
+    contradiction
+  . -- this is case `zero`
+    left
+    eq_refl
+
+/-!
+If you don't have a name for the case, you can use `next` to focus on one goal.
+-/
+example:
+  1 = 2 ->
+  (1 = 2 -> 3 = 4) ->
+  3 = 4
+:= by
+  intro H1 H2
+  apply ModusPones (A := 1 = 2) (B := 3 = 4)
+  next =>
+    exact H1
+  next =>
+    exact H2
+
+/-!
+Then, what is the difference between `next` and a bullet? `next` can be used to name unaccessible
+hypotheses. In other words, `next` is equivalent to a bullect followed by a `rename_i`.
+-/
+example:
+  1 = 2 ->
+  (1 = 2 -> 3 = 4) ->
+  3 = 4
+:= by
+  intros
+  apply ModusPones (A := 1 = 2) (B := 3 = 4)
+  next H1 _ =>
+    exact H1
+  next _ H2 =>
+    exact H2
+
+
+/-!
+### destruct with rcases
+Lean further provides tactic `rcases` for us to do the case analysis in a even simpler way.
+You use `|` to separate different cases and use `⟨⟩` to decompose each case.
+-/
+example (n: Nat): n = 0 ∨ n ≠ 0 := by
+  rcases n with ⟨⟩ | ⟨n'⟩
+  . -- zero
+    left
+    eq_refl
+  . -- succ
+    right
+    intro contra
+    contradiction
+
+/-!
+We also have some `rcases` variations of other tactics. For example, `rintro`.
+-/
+example: forall n: Nat, n = 0 ∨ n ≠ 0 := by
+  rintro (⟨⟩ | ⟨n'⟩)
+  . -- zero
+    left
+    eq_refl
+  . -- succ
+    right
+    intro contra
+    contradiction
+
+
+/-!
+And `obtain` is the `rcases` version of `have`/`let`.
+-/
+example (n: Nat): n = 0 ∨ n ≠ 0 := by
+  obtain ⟨⟩ | ⟨n'⟩ := n
+  . -- zero
+    left
+    eq_refl
+  . -- succ
+    right
+    intro contra
+    contradiction
+
+
+/-!
+### case with equality and split
+Let's look at the following proof. Suppose `f n = b.not`. Then `(f n).not = b`. There are many
+ways to prove it. For example, we can prove this by a `rewrite` and then using the idempotence
+of `not`. To illustrate why we need equality in `cases`, we do the case anaylsis on `f n`.
+```lean
+example (n: Nat) (f: Nat -> Bool) (b: Bool): f n = b.not -> (f n).not = b := by
+  intro H
+  unfold not
+  cases (f n) with
+  | true =>
+    admit
+  | false =>
+    admit
+```
+
+In this proof, after we `unfold not`, we have to do a pattern match for `f n`. This suggests
+that we should do a case analysis on `f n`:
+1. if `f n = true`, then we have to prove `false = b`;
+2. if `f n = false`, then we have to prove `true = b`.
+
+In either case, we meet with a trouble: we only know `f n = b.not`; how can we prove `b = true`
+or `b = false`? The reason is that after the `cases`, the information about `f n` and `b` is
+thrown away. To solve it, we put the `E:` before `n` in `cases`. Then, Lean will generate an
+equality named `E` for us to `rewrite`.
+
+> This is also applied to `rcases` and `induction`.
+-/
+
+example (n: Nat) (f: Nat -> Bool) (b: Bool): f n = b.not -> (f n).not = b := by
+  intro H
+  unfold not
+  cases E: (f n) with
+  | true =>
+    simp
+    rewrite [E] at H
+    simp at H  -- Since `not` is injective, Lean can simplify `H` for us.
+    exact H
+  | false =>
+    simp
+    rewrite [E] at H
+    simp at H
+    exact H
+
+
+/-!
+If there exists a `match` (or `if`) in the goal, you can use the `split` instead
+of `cases E: term ...`.
+
+> If there is a `match` in some hypothesis `H`, use `split at H`.
+-/
+
+example (n: Nat) (f: Nat -> Bool) (b: Bool): f n = b.not -> (f n).not = b := by
+  intro H
+  unfold not
+  split
+  next E =>
+    -- Lean even provides this single tactic to do all the `rewrite` and `simp`.
+    simp_all
+  next E =>
+    simp_all
+
+
+/-!
+## Control structures
+WIP
+
+- [skip](https://lean-lang.org/doc/reference/latest/Tactic-Proofs/Tactic-Reference/#skip)
+- [fail](https://lean-lang.org/doc/reference/latest/Tactic-Proofs/The-Tactic-Language/#fail)
+- [try](https://lean-lang.org/doc/reference/latest/Tactic-Proofs/The-Tactic-Language/#try)
+- [first](https://lean-lang.org/doc/reference/latest/Tactic-Proofs/The-Tactic-Language/#first)
+- [repeat](https://lean-lang.org/doc/reference/latest/Tactic-Proofs/The-Tactic-Language/#repeat)
+-/
+
+/-!
+## Calc and Conv
+WIP
+
+- [calc](https://lean-lang.org/doc/reference/latest/Tactic-Proofs/Tactic-Reference/#calc)
+- [conv](https://lean-lang.org/doc/reference/latest/Tactic-Proofs/Targeted-Rewriting-with--conv/#conv)
+
+For an equality (or a [transitive relation](LeanFoundations.Logic.Rel.html)), you can prove it
+by the _calculation_. We just list each step of the calculation and prove it.
+-/
+example (n m: Nat): n = m -> 3 * (4 + n) = 6 + 6 + 3 * m := by
+  intro E
+  calc
+    3 * (4 + n) = 3 * 4 + 3 * n := by
+      apply Nat.mul_add
+    3 * 4 + 3 * n = 6 + 6 + 3 * m := by
+      rewrite [E]
+      simp
+
+
+/-!
+Since in each step, the term after `=` will be the term before `=` in the next step, we can
+use the following alternative syntax.
+-/
+
+example (n m: Nat): n = m -> 3 * (4 + n) = 6 + 6 + 3 * m := by
+  intro E
+  calc 3 * (4 + n)
+    _ = 3 * 4 + 3 * n := by
+      apply Nat.mul_add
+    _ = 6 + 6 + 3 * m := by
+      rewrite [E]
+      simp
+
+/-!
+Or you can stop at some step and do the ordinary proof.
+-/
+example (n m: Nat): n = m -> 3 * (4 + n) = 6 + 6 + 3 * m := by
+  intro E
+  calc 3 * (4 + n)
+    _ = 3 * 4 + 3 * n := by
+      apply Nat.mul_add
+  -- The goal is now `3 * 4 + 3 * n = 6 + 6 + 3 * m`.
+  rewrite [E]
+  simp
+
+
+/-!
+## Generalizing
+Sometimes, we prove a specific situation by proving it for the generalizing situation.
+-/
+example: 3 = 3 := by
+  have generalized: forall x: Nat, x = x := by
+    intro x
+    eq_refl
+  apply generalized 3
+
+/-!
+In this case, we generalized the `3` to `x`. Lean provides tactic `generalize` to do that.
+-/
+example: 3 = 3 := by
+  generalize 3 = x
+  eq_refl
+
+/-!
+And if you need the equality of the generalization later, you can do the following.
+-/
+example: 3 = 3 := by
+  generalize E: 3 = x
+  eq_refl
+
+/-!
+But why do we need generalization? Since we can even keep the equality, what's the point of this?
+The answer is that sometimes we have to generalize a proposition in order to have a good inductive
+hypothesis. One typical situation is the [tail recursion][appel2007compiling] optimization. The
+following two are mathematically equivalent, but `sum_list_tr` is more efficient in Lean.
+-/
+
+
+def sum_list (l: List Nat): Nat :=
+  match l with
+  | [] => 0
+  | x :: xs =>
+    x + (sum_list xs)
+
+
+def sum_list_tr (l: List Nat) (acc: Nat): Nat :=
+  match l with
+  | [] => acc
+  | x :: xs =>
+    sum_list_tr xs (x + acc)
+
+
+/-!
+How can we prove the equivalence between them? Let's consider the following proof.
+```lean
+example (l: List Nat): (sum_list l) = sum_list_tr l 0 := by
+  induction l with
+  | nil =>
+    simp [sum_list, sum_list_tr]
+  | cons x xs IH =>
+    simp [sum_list, sum_list_tr]
+    admit
+```
+In the case `cons`, the inductive hypothesis has type `IH: sum_list xs = sum_list_tr xs 0`,
+while the target is `x + sum_list xs = sum_list_tr xs x`. This time we cannot trigger the
+inductive hypothesis. The trick here is to observe that we want to prove
+`s + sum_list l = sum_list_tr l s` for all summed value `s`, not just a `0`. That is to say that
+the proposition to prove in the induction is `forall s, s + sum_list l = sum_list_tr l s`.
+So, we first change the goal to `0 + sum_list l = sum_list_tr l 0`, and then generalize the
+`0` to `s`, and finally revert `s` to get the correct proposition.
+-/
+
+example (l: List Nat): (sum_list l) = sum_list_tr l 0 := by
+  -- First, we change the goal.
+  calc (sum_list l)
+    _ = 0 + (sum_list l) := by
+      simp
+  -- Goal is `0 + sum_list l = sum_list_tr l 0`.
+  -- Then, the generalization.
+  generalize 0 = s  -- `s + sum_list l = sum_list_tr l s`
+
+  -- Since we want this to be true for all `s`, we have to revert it.
+  -- Otherwise, the inductive hypothesis is only true for one specify `s`.
+  revert s  -- `forall s, s + sum_list l = sum_list_tr l s`
+  induction l with
+  | nil =>
+    intro s
+    simp [sum_list, sum_list_tr]
+  | cons x xs IH =>
+    intro s
+    simp [sum_list, sum_list_tr]
+    -- the goal is `s + (x + sum_list xs) = sum_list_tr xs (x + s)`
+    calc s + (x + sum_list xs)
+      _ = (s + x) + sum_list xs := by
+        rewrite [<-Nat.add_assoc]
+        eq_refl
+      _ = (x + s) + sum_list xs := by
+        rewrite [<-Nat.add_comm (n := s) (m := x)]
+        eq_refl
+      _ = sum_list_tr xs (x + s) := by
+        -- Now, the goal is `x + s + sum_list xs = sum_list_tr xs (x + s)`.
+        -- This is exactly the inductive hypothesis.
+        apply IH
+
+/-!
+> Another situation to use generalization is that we may have some trouble triggering the
+> [inductive principle](LeanFoundations.Logic.IndPrinciples.html) on some certain term. In this case we
+> have to do the generalization first. We will see some applications later.
+-/
+
+/-!
+### Generalizing on induction
+In the previous proof, we reverted one hypothesis and re-introduced it in each case.
+Lean provides a syntactic sugar to simplify that process by putting a `generalizing` after
+`induction`.
+-/
+
+example (l: List Nat): (sum_list l) = sum_list_tr l 0 := by
+  -- First, we change the goal.
+  calc (sum_list l)
+    _ = 0 + (sum_list l) := by
+      simp
+  -- Then, the generalization.
+  generalize 0 = s
+  -- Now, we just write generalizing `s`. Lean will put the `forall` for it.
+  induction l generalizing s with
+  | nil =>
+    simp [sum_list, sum_list_tr]
+  | cons x xs IH =>
+    simp [sum_list, sum_list_tr]
+    -- the goal is `s + (x + sum_list xs) = sum_list_tr xs (x + s)`
+    calc s + (x + sum_list xs)
+      _ = (s + x) + sum_list xs := by
+        rewrite [<-Nat.add_assoc]
+        eq_refl
+      _ = (x + s) + sum_list xs := by
+        rewrite [<-Nat.add_comm (n := s) (m := x)]
+        eq_refl
+      _ = sum_list_tr xs (x + s) := by
+        -- Now, the goal is `x + s + sum_list xs = sum_list_tr xs (x + s)`.
+        -- This is exactly the inductive hypothesis.
+        apply IH
