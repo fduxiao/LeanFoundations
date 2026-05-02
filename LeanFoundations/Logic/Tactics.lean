@@ -169,6 +169,39 @@ This time, we only `intro` `H1` and it works similarly.
 -/
 
 /-!
+### Alternative syntax
+Like functions, we have the following alternative syntax to make an implication.
+-/
+theorem ModusPones' (A B: Prop):
+  A ->
+  (A -> B) ->
+  B
+:= by
+  -- you don't have to `intro A B` this time
+  intro HA HAB
+  apply HAB
+  exact HA
+
+/-!
+Or even the following with implicit parameters.
+-/
+theorem ModusPones'' {A B: Prop}
+  (HA: A) (HAB: A -> B)
+:
+  B
+:= by
+  apply HAB
+  exact HA
+
+/-!
+You can check and compare their types.
+-/
+#check ModusPones
+#check ModusPones'
+#check ModusPones''
+
+
+/-!
 ### Type Inference and Early Application
 Another notable thing is that `apply` will try to figure out the type
 (proposition) such as those after the quantifiers. For example, if
@@ -442,6 +475,30 @@ example (A B C: Prop): (A -> B -> C) -> (A ∧ B -> C) := by
 example (A B C: Prop): (A ∧ B -> C) -> (A -> B -> C) := by
   admit
 
+
+/-!
+If you have a very long conjuction, you can use `and_intros` instead of repeating `apply And.intros`.
+-/
+example (A B C D: Prop): A -> B -> C -> D -> A ∧ (B ∧ C) ∧ D := by
+  intro Ha Hb Hc Hd
+  apply And.intro
+  . exact Ha
+  . apply And.intro
+    . apply And.intro
+      . exact Hb
+      . exact Hc
+    . exact Hd
+
+
+example (A B C D: Prop): A -> B -> C -> D -> A ∧ (B ∧ C) ∧ D := by
+  intro Ha Hb Hc Hd
+  and_intros
+  . exact Ha
+  . exact Hb
+  . exact Hc
+  . exact Hd
+
+
 /-!
 ### If and Only If
 If you want to prove two propositions are equivalent to each other, you have to prove them in
@@ -594,6 +651,25 @@ example: 1 = 0 -> 3 = 4 := by
 
 
 /-!
+Lean does a lot in the `simp` tactic. It does not only simplify a computation, but also simplifies
+according to some proved facts. For example, `Bool.not` is also injective, though it is not a
+constructor.
+-/
+
+#check Bool.not_inj
+example (b1 b2: Bool): !b1 = !b2 -> b1 = b2 := by
+  intro H
+  simp at H
+  exact H
+
+/-!
+This is convenient and helpful if you are verifying a very complicated theorem, but it may also be
+adverse for a pedagogical purpose. We will soon lean how to extend the `simp` for our own definitions.
+From now on, we will frequently use those simplifications in our proof, but be sure that you know
+how to prove purely by those proved theorems.
+-/
+
+/-!
 ## Falsehood and Negation
 In the previous situation, we see that if we have some contradiction, then we can stop the
 proof. The contradiction is often met with when you are using _proof by contradiction_ or
@@ -664,11 +740,12 @@ We have seen the behavior of the universal quantifier. What about its
 Certainly, Lean provides it. To make an existential proposition, you have to first give
 a predicate.
 
-Mathematically, a predicate $P$ on natural numbers $ℕ$ is a bunch of propositions for each
-number $x∈ℕ$. For example, given a number $x∈ℕ$, we can ask whether $x = 0$ or not. This is
+Mathematically, a predicate $P$ on natural numbers $ℕ$ is a bunch of propositions indexed by all
+natural numbers. For example, given a number $x∈ℕ$, we can ask whether $x = 0$ or not. This is
 to say that for each $x$, we make a proposition $x = 0$. In other words, it is a function from
 natural numbers to `Prop`. In Lean, we encode a predicate on some type `A` simply as a function
-from `A` to `Prop`.
+from `A` to `Prop`. The type system of Lean allows us to define functions that map a term to
+a proposition using the same syntax to define an ordinary function.
 -/
 
 def isZero: Nat -> Prop := fun n => n = 0
@@ -1213,6 +1290,34 @@ example (n m: Nat): n = m -> 3 * (4 + n) = 6 + 6 + 3 * m := by
   -- The goal is now `3 * 4 + 3 * n = 6 + 6 + 3 * m`.
   rewrite [E]
   simp
+
+
+/-!
+### omega: Automation for Arithmetic
+For the equality about natural numbers, Lean will try to close the goal simply by `calc`.
+-/
+example (n m: Nat): n = m -> 2 * m + 2 = 2 * (n + 1) := by
+  intro E
+  rewrite [E]
+  calc 2 * m + 2
+
+
+
+/-!
+Moreover, we have a solver for [quantifier-free problems in (Presburger) arithmetic][pugh1991omega].
+For a proposition involving only natural numbers and equalities (and inequalites, which will be
+given later), we can try to solve it with tactic `omega`.
+-/
+example (n m: Nat): n = m -> 3 * (4 + n) = 6 + 6 + 3 * m := by
+  intro E
+  rewrite [E]
+  omega
+
+/-!
+Or even just the following.
+-/
+example (n m: Nat): n = m -> 3 * (4 + n) = 6 + 6 + 3 * m := by
+  omega
 
 
 /-!

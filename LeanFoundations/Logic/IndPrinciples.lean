@@ -100,7 +100,7 @@ defined *sets*, like `Nat`, `List`, etc. The induction principles for inductivel
 induction principle for `ev`:
 -/
 
-#check ev.rec
+#check Even.rec
 
 /-!
 This is saying: Suppose we have some property `motive` of pairs `(n, E)` where `n` is a number
@@ -124,7 +124,7 @@ will invoke `ev.rec` under the hood) or apply `ev.rec` directly.
 As an example, here's the proof that `ev n → ev (n + 4)` for any `n`:
 -/
 
-theorem ev_ev_plus_4 : ∀ n, ev n → ev (n + 4) := by
+theorem ev_ev_plus_4 : ∀ n, Even n → Even (n + 4) := by
   sorry
 
 /-!
@@ -134,14 +134,14 @@ Let's look at some more examples of induction over evidence. Here's a proof that
 then so is `n - 2`:
 -/
 
-theorem ev_minus2 : ∀ n, ev n → ev (n - 2) := by
+theorem ev_minus2 : ∀ n, Even n → Even (n - 2) := by
   intro n E
   induction E with
-  | ev_0 =>
+  | zero =>
     -- n = 0, so n - 2 = 0 - 2 = 0 (by truncated subtraction)
     simp
-    apply ev.ev_0
-  | ev_SS n' E' ih =>
+    apply Even.zero
+  | succ2 n' E' ih =>
     -- n = n' + 2, so n - 2 = (n' + 2) - 2 = n'
     -- We have E' : ev n', which is exactly what we need
     simp [Nat.add_sub_cancel]
@@ -153,7 +153,7 @@ theorem ev_minus2 : ∀ n, ev n → ev (n - 2) := by
 Prove the following theorem:
 -/
 
-theorem ev_minus2_n : ∀ n, ev n → ∃ k, n = k + k := by
+theorem ev_minus2_n : ∀ n, Even n → ∃ k, n = k + k := by
   sorry
 
 /-!
@@ -233,15 +233,15 @@ to assume not just that the property holds for smaller numbers, but that it hold
 Here's another example where induction on evidence is useful:
 -/
 
-theorem ev_sum_again : ∀ n m, ev n → ev m → ev (n + m) := by
+theorem ev_sum_again : ∀ n m, Even n → Even m → Even (n + m) := by
   intro n m En Em
   induction En with
-  | ev_0 =>
+  | zero =>
     simp
     exact Em
-  | ev_SS n' En' ih =>
+  | succ2 n' En' ih =>
     rw [Nat.add_assoc, Nat.add_comm 2 m, ← Nat.add_assoc]
-    apply ev.ev_SS
+    apply Even.succ2
     exact ih
 
 /-!
@@ -260,12 +260,13 @@ Give an alternative proof of `le_trans` that uses induction on evidence that `m 
 of induction on `n`.
 -/
 
-theorem le_trans : ∀ n m o, n ≤' m → m ≤' o → n ≤' o := by
+theorem le_trans : ∀ n m o, le n m → le m o → le n o := by
   intro n m o Hnm Hmo
   induction Hmo with
-  | le_refl => exact Hnm
-  | le_step o' Hmo' ih =>
-    apply le.le_step
+  | refl =>
+    exact Hnm
+  | step o' Hmo' ih =>
+    apply le.step
     exact ih
 
 /-!
@@ -299,11 +300,11 @@ theorem ev_induction_principle :
   ∀ (P : Nat → Prop),
     P 0 →
     (∀ n, P n → P (n + 2)) →
-    ∀ n, ev n → P n := by
+    ∀ n, Even n → P n := by
   intro P H0 H2 n E
   induction E with
-  | ev_0 => exact H0
-  | ev_SS n' E' ih => apply H2; exact ih
+  | zero => exact H0
+  | succ2 n' E' ih => apply H2; exact ih
 
 /-!
 ### Exercise: 2 stars, standard (ev_sum_using_principle)
@@ -311,16 +312,16 @@ theorem ev_induction_principle :
 Use the alternative induction principle to prove `ev_sum`:
 -/
 
-theorem ev_sum_using_principle : ∀ n m, ev n → ev m → ev (n + m) := by
+theorem ev_sum_using_principle : ∀ n m, Even n → Even m → Even (n + m) := by
   intro n m En Em
-  apply ev_induction_principle (P := fun k => ev (k + m))
+  apply ev_induction_principle (P := fun k => Even (k + m))
   · -- Base case: ev (0 + m)
     simp
     exact Em
   · -- Inductive step: ∀ k, ev (k + m) → ev ((k + 2) + m)
     intro k ih
     rw [Nat.add_assoc, Nat.add_comm 2 m, ← Nat.add_assoc]
-    apply ev.ev_SS
+    apply Even.succ2
     exact ih
   · -- Apply to our specific n
     exact En
@@ -336,7 +337,7 @@ to prove a more general statement.
 Prove that `2 * n` is even for all `n`:
 -/
 
-theorem double_even : ∀ n, ev (2 * n) := by
+theorem double_even : ∀ n, Even (2 * n) := by
   sorry
 
 /-!
@@ -346,7 +347,7 @@ Try to prove the following theorems using induction on evidence:
 -/
 
 -- Exercise: Prove that if n is even, then n can be written as 2*k for some k
-theorem ev_double_n : ∀ n, ev n → ∃ k, n = 2 * k := by
+theorem ev_double_n : ∀ n, Even n → ∃ k, n = 2 * k := by
   sorry
 
 /-!

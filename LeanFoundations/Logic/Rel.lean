@@ -16,27 +16,10 @@ In This chapter we are going to inspect _binary relations_ on a type. In mathema
 relation is to associate two elements of a set. In set theory, we model such a relation $R$ on a set
 $X$ to be a subset $R \subseteq X\times X$. Thus, if two elements $x,y\in X$ are associated, we say
 $R x y$, which means $(x, y) \in R$. Some typical relations are equalities, the _le_ (less than or
-equal to) relation on $\mathbb{N}$.
+equal to) relation on $\mathbb{N}$. In Lean, we encode a (binary) relation on `A` as a function
+`A -> A -> Prop`.
 -/
-
-/-!
-## Relations as Propositions
-Another perspective about relation is that given $x, y\in X$, you have to determine whether
-$R x y$ holds or not, i.e., the relation is a family of propositions parameterized by two elements of
-$X$ -- i.e., a proposition about pairs of elements of $X$. For instance, we've seen the
-relation `le` on numbers.
--/
-
-#check le
-
-/-!
-The relation `le` gives us a family of propositions: for any two numbers `n` and `m`, we have
-the proposition `n ≤' m`, which may or may not be provable.
-
-Hence, in Lean, we model relations on `X` as `X -> X -> Prop`.
-> Recall that `abbrev` means you give an alias to some type, while `def` means you want to define
-> a new one.
--/
+namespace Relation
 
 abbrev Relation (X: Type) := X -> X -> Prop
 
@@ -61,20 +44,20 @@ class Relation.PartialFunction {X: Type} (R: Relation X): Prop where
   functional: forall x y1 y2, R x y1 -> R x y2 -> y1 = y2
 
 /-!
-For example, the `next_nat` relation is a partial function.
+For example, the `NextNat` relation is a partial function.
 -/
 
-inductive next_nat : Nat → Nat → Prop where
-  | nn (n : Nat) : next_nat n (n + 1)
+inductive NextNat : Nat → Nat → Prop where
+  | nn (n : Nat) : NextNat n (n + 1)
 
-instance next_nat_partial_function : Relation.PartialFunction next_nat where
+instance next_nat_partial_function : Relation.PartialFunction NextNat where
   functional := by
     intro x y1 y2 H1 H2
     cases H1 with
     | nn =>
       cases H2 with
       | nn =>
-        -- We have next_nat x (x + 1) and next_nat x (x + 1)
+        -- We have NextNat x (x + 1) and NextNat x (x + 1)
         -- Therefore y1 = y2 = x + 1
         eq_refl
 
@@ -89,8 +72,8 @@ Show that the `≤` relation on naturals is not a partial function.
 theorem le_not_a_partial_function : ¬ Relation.PartialFunction le := by
   intro H
   -- We'll show that le 0 0 and le 0 1, which would imply 0 = 1 by partial_function
-  have H1 : le 0 0 := le.le_refl 0
-  have H2 : le 0 1 := le.le_step 0 0 H1
+  have H1 : le 0 0 := le.refl 0
+  have H2 : le 0 1 := le.step 0 0 H1
   have : 0 = 1 := H.functional 0 0 1 H1 H2
   -- This is a contradiction
   cases this
@@ -129,10 +112,10 @@ For example, `le` is reflexive.
 -/
 
 instance le_reflexive: Reflexive le where
-  refl := le.le_refl _  -- `_` is the placeholder, which is inferred automatically.
+  refl := le.refl _  -- `_` is the placeholder, which is inferred automatically.
 
 
-example: 5 ≤' 5 := by
+example: le 5 5 := by
   apply Relation.refl
 
 
@@ -149,8 +132,8 @@ instance {X: Type}: Reflexive (Eq (α := X)) where
 
 Note that Lean provides us the `Std.Refl` typeclass:
 -/
-instance: Std.Refl le where
-  refl := le.le_refl
+instance: Std.Refl Nat.le where
+  refl := @Nat.le.refl
 
 
 /-!
@@ -158,10 +141,11 @@ It also provides the `rfl` tactic. But to use it, you have to
 tag it with the attribute `refl`.
 -/
 @[refl] theorem le_refl: forall x, le x x := by
-  apply le.le_refl
+  apply le.refl
 
-example: 5 ≤' 5 := by
+example: le 5 5 := by
   rfl
+
 
 /-!
 You can think of `rfl` as an alias to `apply Relation.refl`. We will learn
@@ -192,9 +176,10 @@ instance le_transitive: Transitive le where
     intro x y z
     intro Hab Hbc
     induction Hbc with
-    | le_refl => exact Hab
-    | le_step c' Hbc' ih =>
-      apply le.le_step
+    | refl =>
+      exact Hab
+    | step c' Hbc' ih =>
+      apply le.step
       exact ih
 
 
@@ -203,26 +188,26 @@ So now, if you want to prove `3 ≤' 5`, you can use the transitivity, i.e., it 
 prove `3 ≤' 4` and `4 ≤' 5`, which are exactl a `le.le_step` followed by `le.le_refl`.
 Note that this time we specify the intermediate value `y := 4`.
 -/
-example: 3 ≤' 5 := by
+example: le 3 5 := by
   apply Relation.trans (y := 4)  -- you can specify the intermediate value
-  . apply le.le_step
-    apply le.le_refl
-  . apply le.le_step
-    apply le.le_refl
+  . apply le.step
+    apply le.refl
+  . apply le.step
+    apply le.refl
 
 /-!
 You can also repeat `Relation.trans` in chain, and let Lean to figure out the
 intermediate value. This suggests some kind of automation of proof.
 -/
-example: 3 ≤' 6 := by
+example: le 3 6 := by
   apply Relation.trans  -- or let Lean to figure that out
-  . apply le.le_step
-    apply le.le_refl
+  . apply le.step
+    apply le.refl
   . apply Relation.trans
-    . apply le.le_step
-      apply le.le_refl
-    . apply le.le_step
-      apply le.le_refl
+    . apply le.step
+      apply le.refl
+    . apply le.step
+      apply le.refl
 
 /-!
 ### Symmetric and Antisymmetric Relations
@@ -255,7 +240,7 @@ Prove that the `≤` relation on naturals is not symmetric.
 
 theorem le_not_symmetric_rel : ¬ Symmetric le := by
   intro H
-  have H1 : le 0 1 := le.le_step 0 0 (le.le_refl 0)
+  have H1 : le 0 1 := le.step 0 0 (le.refl 0)
   have H2 : le 1 0 := H.symm H1
   -- Now we have le 1 0, which means 1 ≤ 0, but this is impossible
   cases H2
@@ -327,14 +312,14 @@ instance: Congruence le Nat.succ where
     intro x y
     intro H
     induction H with
-    | le_refl =>
-      apply le.le_refl
-    | le_step t H IH =>
+    | refl =>
+      apply le.refl
+    | step t H IH =>
       apply Transitive.trans
       . apply IH
       . simp
-        apply le.le_step
-        apply le.le_refl
+        apply le.step
+        apply le.refl
 
 
 /-!
@@ -384,7 +369,7 @@ instance: SubRel Eq le where
   inclusion := by
     intro x y H
     rewrite [H]
-    apply le.le_refl
+    apply le.refl
 
 
 /-!

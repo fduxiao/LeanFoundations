@@ -153,6 +153,13 @@ You can also specify some parameters (partially apply) with the `(param := term)
 #eval id (A := Nat) (x := .zero)  -- should be .zero
 
 
+/-!
+You can also use the following alternative syntax to define `id`.
+-/
+def id'': {A: Type} -> (x: A) -> A := fun {A} x => x
+def id''': forall {A: Type}, A -> A := fun {A} x => x
+
+
 end scratch
 
 

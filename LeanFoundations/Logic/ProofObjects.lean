@@ -295,7 +295,7 @@ theorem some_nat_is_even : ∃ n : Nat, n + n = 4 :=
 Complete the definition of the following proof object:
 -/
 
-theorem ex_ev_Sn : ∃ n : Nat, ev (n + 1) := by
+theorem ex_ev_Sn : ∃ n : Nat, Even (n + 1) := by
   sorry
 
 /-!
@@ -391,7 +391,7 @@ Here's an exercise that just requires applying existing lemmas. No induction or 
 is needed, but some of the rewriting may be tedious.
 -/
 
-theorem ev_plus_plus_simple : ∀ n m p, ev (n + m) → ev (n + p) → ev (m + p) := by
+theorem ev_plus_plus_simple : ∀ n m p, Even (n + m) → Even (n + p) → Even (m + p) := by
   sorry
 
 /-!
@@ -440,7 +440,7 @@ theorem bogus_subgoal : True → False := by
 Prove that `b * 2` is even for any `b`.
 -/
 
-theorem b_times2 : ∀ b : Nat, ev (b * 2) := by
+theorem b_times2 : ∀ b : Nat, Even (b * 2) := by
   intro b
   rw [Nat.mul_comm]
   apply ev_double
@@ -453,10 +453,10 @@ theorem b_times2 : ∀ b : Nat, ev (b * 2) := by
 This exercise explores how hypotheses work in Lean.
 -/
 
-theorem ev_plus_one : ∀ n, ev (n + 1) → False := by
+theorem ev_plus_one : ∀ n, Even (n + 1) → False := by
   intro n H
   cases H with
-  | ev_SS n' H' =>
+  | succ2 n' H' =>
     -- We have ev (n' + 2), but n + 1 = n' + 2 means n = n' + 1
     -- This leads to a contradiction since n + 1 cannot be even
     sorry

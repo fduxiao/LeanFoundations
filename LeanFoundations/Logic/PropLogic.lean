@@ -12,7 +12,11 @@ evidence of their truth (proofs). In particular, we have worked extensively with
 equality propositions (e1 = e2), implications (P → Q), and quantified propositions
 (∀ x, P). In this chapter, we will see how Lean can be used to carry out other
 familiar forms of logical reasoning.
+-/
 
+namespace Logic
+
+/-!
 Before diving into details, we should talk a bit about the status of mathematical
 statements in Lean. Recall that Lean is a typed language, which means that every
 sensible expression has an associated type. Logical claims are no exception: any
