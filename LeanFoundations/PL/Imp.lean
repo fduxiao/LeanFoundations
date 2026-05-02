@@ -7,7 +7,7 @@ This file is a Lean 4 translation of the "Simple Imperative Programs" chapter fr
 Software Foundations (Logical Foundations).
 -/
 
-import LeanFoundations.Logic.Maps
+import LeanFoundations.PL.Maps
 
 /-!
 # Simple Imperative Programs
