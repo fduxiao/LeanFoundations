@@ -459,6 +459,16 @@ theorem le1_le2 (n m: Nat):
     apply IH
     eq_refl
 
+/-!
+### Built-in Comparison Relation
+Lean provides the build comparison relations `≤`, `<`, `≥`, and `>`. They are defined in the same way as `le` above.
+The tactic `omega` can solve goals involving these relations.
+-/
+example : 3 ≤ 5 := by
+  omega
+
+example : x ≤ 3 -> x ≤ 5 := by
+  omega
 
 /-!
 ## Case analysis on Evidence
@@ -700,3 +710,67 @@ theorem ev_plus_plus : ∀ n m p, Even (n + m) → Even (n + p) → Even (m + p)
     rw [← Nat.two_mul]
     apply ev_double
   apply ev_ev__ev (n + n) (m + p) h1 h3
+
+
+/-!
+## Membership Relation for Lists
+-/
+
+namespace scratch
+
+inductive In {X: Type} (x: X) : List X -> Prop where
+  | here {xs: List X} : In x (x :: xs)
+  | there {y: X} {xs: List X} : In x xs -> In x (y :: xs)
+
+
+example: In 3 [1, 2, 3] := by
+  apply In.there
+  apply In.there
+  apply In.here
+
+
+theorem In.cons {X: Type} {x y: X} {xs: List X}:
+  In x xs -> In x (y :: xs)
+:= by
+  intro H
+  apply In.there
+  exact H
+
+
+theorem In.app_right {X: Type} {x: X} {xs ys: List X}:
+  In x xs -> In x (xs ++ ys)
+:= by
+  intro H
+  induction H
+  case here =>
+    apply In.here
+  case there y xs H IH =>
+    apply In.there
+    exact IH
+
+
+theorem In.app_left {X: Type} {x: X} {xs ys: List X}:
+  In x xs -> In x (ys ++ xs)
+:= by
+  intro H
+  induction ys
+  case nil =>
+    simp
+    exact H
+  case cons y ys IH =>
+    apply In.there
+    exact IH
+
+
+/-!
+Lean has a built-in `List.Mem` inductive proposition, which is the same as our `In`.
+More naturally, you can use the notation `x ∈ xs` to denote `List.Mem x xs`, which is the same as `In x xs`.
+Lean also provides the automation concerning `List.Mem`. Most membership goals can be solved by `grind` tactic.
+-/
+#check List.Mem
+
+
+example: 3 ∈ [1, 2, 3] := by
+  grind
+
+end scratch
