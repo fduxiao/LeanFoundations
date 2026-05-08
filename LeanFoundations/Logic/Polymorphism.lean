@@ -168,10 +168,10 @@ end scratch
 
 In previous chapters, we worked with lists containing only natural numbers (NatList).
 But real programs need to work with many kinds of lists:
-* Lists of strings
+* Lists of characters -- they are just strings!
 * Lists of booleans
 * Lists of custom types
-* Even lists of other lists!
+* Even lists of other lists, like a list of strings!
 
 We *could* define separate list types for each element type we need:
 -/
@@ -212,7 +212,6 @@ Let's break down what's happening here:
 
 For example:
 * `MyList Nat` is a list of natural numbers
-* `MyList String` is a list of strings
 * `MyList Bool` is a list of booleans
 
 Think of `MyList` as a "type constructor" or a function from types to types.
@@ -276,8 +275,7 @@ def explicitBoolList : MyList Bool :=
   MyList.cons true (MyList.cons false (MyList.nil (α := Bool)))
 
 /-!
-## Polymorphic Functions
-
+## Implementing Polymorphic List Operations
 Now that we have polymorphic types, we can define polymorphic functions that
 work with these types. Let's implement a function that repeats a value to
 create a list:
@@ -304,60 +302,19 @@ Let's test our function:
 #eval myRepeat Bool false 2  -- A list with two false values
 
 /-!
-This is how polymorphic functions work in their most explicit form. But having
-to specify type arguments all the time can be tedious. Next, we'll see how
-Lean can infer these types automatically in many cases.
+We can also use implicit parameters to make the function easier to call.
 -/
-
-/-!
-## Type Argument Inference
-
-When we define polymorphic functions like `myRepeat`, we have to pass the
-type explicitly as the first argument. However, often this type can be
-determined from the other arguments.
-
-For example, in `myRepeat Nat 5 3`, the type parameter `Nat` could be inferred
-from the fact that `5` has type `Nat`.
-
-Again, we use the **implicit** arguments by wrapping them in curly braces and
-Lean will try to figure out their values from context.
--/
-
 -- Repeat with implicit type parameter
 def myRepeat' {α : Type} (x : α) (count : Nat) : MyList α :=
   match count with
   | 0 => MyList.nil (α := α)  -- We still need to provide α here explicitly
   | n+1 => MyList.cons x (myRepeat' x n)  -- No need to pass α to myRepeat' recursively
 
-/-!
-There are two important differences here:
-
-1. We put the type parameter `α` in curly braces `{α : Type}` instead of
-   parentheses, making it an **implicit argument**
-
-2. We don't pass `α` to `myRepeat'` in the recursive call because it's implicit
-
-However, notice that we still need to provide `α` explicitly to `MyList.nil`.
-This is because there's no other information in that context that would help
-Lean determine what type `α` should be.
-
-Now we can call myRepeat' without specifying the type:
--/
-
--- Now we can call myRepeat' without specifying the type explicitly
 #eval myRepeat' 5 3       -- Lean infers α = Nat
 #eval myRepeat' "hello" 2 -- Lean infers α = String
 
 /-!
-We can still provide the type explicitly when needed, using a named parameter:
--/
-
-#eval myRepeat' (α := Bool) false 2 -- Explicitly telling Lean that α = Bool
-
-/-!
-## Implementing Polymorphic List Operations
-
-Now let's implement some of the standard list operations in a polymorphic way.
+Then, we introduce other polymorphic functions on lists.
 -/
 
 -- Calculate the length of a polymorphic list
@@ -765,6 +722,40 @@ def standardList : List Nat := [1, 2, 3, 4]
 #eval List.map (fun n => n * 2) standardList  -- [2, 4, 6, 8]
 #eval List.filter (fun n => n % 2 == 0) standardList  -- [2, 4]
 
+/-!
+### Characters and Strings
+Another problem is how to represent _text_ in Lean. We have seen how natural numbers, booleans, and even
+lists of them are encoded in Lean as inductive types. Let's also take a look at how to represent text.
+
+The key is to understand that text is just a sequence of characters. We are then able to concatenate,
+slice, and manipulate text by working with the underlying sequence.
+
+Characters are just an enumeration of symbols we want.
+-/
+inductive MyChar : Type where
+  | a | b | c | d | e | f | g | h | i | j
+  | k | l | m | n | o | p | q | r | s | t
+  | u | v | w | x | y | z
+
+
+/-!
+Then, text (we call them strings) are just lists of characters.
+-/
+def MyString : Type := List MyChar
+
+example: MyString := [.h, .e, .l, .l, .o]
+
+/-!
+In Lean, we have a type `Char` and a type `String` that represent characters and strings respectively.
+-/
+#check 'a'  -- 'a' : Char
+#check "hello"  -- "hello" : String
+#eval "hello" ++ " " ++ "world"  -- "hello world"
+
+/-!
+The source code of a program is just a string. A variable name is just a string. We will use that
+to study the behavior of computer programs.
+-/
 /-!
 ## Exercises with Detailed Hints
 

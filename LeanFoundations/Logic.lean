@@ -10,6 +10,7 @@ import LeanFoundations.Logic.Lists
 import LeanFoundations.Logic.Polymorphism
 import LeanFoundations.Logic.Tactics
 import LeanFoundations.Logic.IndProp
+import LeanFoundations.Logic.FinMap
 import LeanFoundations.Logic.PropLogic
 import LeanFoundations.Logic.ProofObjects
 import LeanFoundations.Logic.IndPrinciples
@@ -26,6 +27,7 @@ import LeanFoundations.Logic.Rel
 - `LeanFoundations.Logic.Polymorphism`: Polymorphism
 - `LeanFoundations.Logic.Tactics`: More basic tactics and logic connectives
 - `LeanFoundations.Logic.IndProp`: Inductively defined propositions
+- `LeanFoundations.Logic.FinMap`: Finite maps
 - `LeanFoundations.Logic.PropLogic`: Propositional Logic
 - `LeanFoundations.Logic.ProofObjects`: The Curry-Howard correspondence
 - `LeanFoundations.Logic.IndPrinciples`: Induction principles
