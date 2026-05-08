@@ -1,11 +1,11 @@
-/-
-Copied from lean source. See https://leanprover.zulipchat.com/#narrow/stream/270676-lean4/topic/simp.20without.20rfl
--/
 import Lean
 
 namespace MyDSimp
 
 open Lean.Parser.Tactic
+/-
+Copied from lean source. See https://leanprover.zulipchat.com/#narrow/stream/270676-lean4/topic/simp.20without.20rfl
+-/
 syntax (name := compute) "compute" (config)? (discharger)? (&" only")?
   (" [" withoutPosition((simpErase <|> simpLemma),*,?) "]")? (location)? : tactic
 
@@ -69,3 +69,22 @@ where
 
 end MyDSimp
 
+
+namespace Solution
+
+macro "solution" "[" x:term "]": term => `($x)
+
+elab "solution" "[" x:tacticSeq "]": tactic => do
+  Lean.Elab.Tactic.evalTactic x.raw
+
+
+def add5: Nat -> Nat := solution[
+  λ x => x + 5
+]
+
+example : add5 3 = 8 := by
+  solution[
+    simp [add5]
+  ]
+
+end Solution

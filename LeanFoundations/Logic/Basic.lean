@@ -6,7 +6,7 @@ Authors: Xiao Tan and Robert Joseph George
 -/
 
 -- Ignore the next line if this is the first time you learn Lean.
-import LeanFoundations.Logic.MyTactics
+import LeanFoundations.MyTactics
 
 
 /-!
@@ -783,7 +783,12 @@ The factorial function is defined with the following recursive rules:
 - `factorial 0 := 1`
 - `factorial (n+1) := (n+1) * factorial n`
 -/
-def Nat.factorial: Nat -> Nat := sorry
+def Nat.factorial: Nat -> Nat := solution[
+  λ n =>
+    match n with
+    | .zero => .zero
+    | .succ n' => n'.add (n'.mul n)
+]
 
 end scratch
 
