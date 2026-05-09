@@ -11,9 +11,13 @@ import LeanFoundations.PL
 
 /-!
 # Preface
+> Our work is heavily based on the [Software Foundations (SF)][Pierce:SF1] series.
+> Many of the examples and ideas are borrowed from SF. Check the
+> [license](../LICENSE.txt) for more details.
+
 We are inspired by the [Software Foundations (SF)][Pierce:SF1]
 series. There should also be a systematic introduction to `how to
-programming and verify algorithms in lean`. Yet, we are more ambitious
+programming and verify algorithms in Lean`. Yet, we are more ambitious
 in that we want to show how to make a (toy) lean out of lean itself and
 verify related code. We assume you know nothing about computer programming,
 but we do assume you are familiar with Unix-like operating systems
@@ -27,10 +31,11 @@ mathematical induction on them).
 
 The whole book is built on
 [this Github repository](https://github.com/fduxiao/LeanFoundations).
-It is just an ordinary `lean` package where the `module comments` are compiled
-as descriptions in this book, while the lean codes are displayed with
-a light green background. You can clone the repository or just make your
-own `lake project` and copy those lines.
+It is just an ordinary Lean package where the `module comments` are compiled
+as descriptions in this book, while the Lean codes are displayed with
+a light green background. You can clone the repository, download the
+[source code](../LeanFoundations.zip), or just make your own `lake project`
+and copy those lines.
 -/
 
 /-TOC-/

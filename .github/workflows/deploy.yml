@@ -43,7 +43,7 @@ jobs:
       - name: build book
         run: |
           pip install git+https://github.com/fduxiao/leanbook
-          leanbook build .
+          leanbook build --with-source .
           cp -r docbuild/.lake/build/doc .lake/build/doc/api
       # deploy
       - name: Setup Pages
