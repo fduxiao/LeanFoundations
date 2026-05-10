@@ -777,7 +777,14 @@ Define the ltb function that tests natural numbers for less-than, yielding a boo
 
 Hint: You can use pattern matching on both arguments at once.
 -/
-def blt: Nat -> Nat -> Bool := sorry
+def blt: Nat -> Nat -> Bool := solution[[
+  fun m n =>
+  match m, n with
+  | .zero, .zero => .false
+  | .succ _, .zero => .false
+  | .zero, .succ _ => .true
+  | .succ m, .succ n => blt m n
+]]
 
 
 /-!
@@ -786,12 +793,12 @@ The factorial function is defined with the following recursive rules:
 - `factorial 0 := 1`
 - `factorial (n+1) := (n+1) * factorial n`
 -/
-def Nat.factorial: Nat -> Nat := solution[
+def Nat.factorial: Nat -> Nat := solution[[
   λ n =>
     match n with
     | .zero => .zero
     | .succ n' => n'.add (n'.mul n)
-]
+]]
 
 end scratch
 
@@ -868,7 +875,11 @@ theorem Nat.one_add: forall (n: Nat), Nat.zero.succ.add n = n.succ := by
 /-!
 ### Exercise: 1 star, standard (mul_zero)
 -/
-theorem Nat.zero_mul: forall (n: Nat), Nat.mul .zero n = .zero := sorry
+theorem Nat.zero_mul: forall (n: Nat), Nat.mul .zero n = .zero := by
+  solution[[
+    intro n
+    simp [Nat.mul]
+  ]]
 
 /-!
 You can also prefix the universal quantifier twice, e.g.,
@@ -982,7 +993,17 @@ theorem Bool.and_comm: forall (b1 b2: Bool), b1.and b2 = b2.and b1 := by
 /-!
 ### Exercise: 1 star, standard (or_comm)
 -/
-theorem Bool.or_comm: forall (b1 b2: Bool), b1.or b2 = b2.or b1 := sorry
+theorem Bool.or_comm: forall (b1 b2: Bool), b1.or b2 = b2.or b1 := by
+  solution[[
+    intro b1 b2
+    cases b1 with
+    | true => match b2 with
+      | true => eq_refl
+      | false => simp [Bool.or]
+    | false => match b2 with
+      | true => simp [Bool.or]
+      | false => eq_refl
+  ]]
 
 
 /-!
@@ -1152,7 +1173,11 @@ Define the function nand (negated-and) that returns true if either or both of it
 Hint: You can use pattern matching on both arguments at once using a comma.
 -/
 
-def Bool.nand (b1 b2 : Bool) : Bool := sorry
+def Bool.nand (b1 b2 : Bool) : Bool := solution[[
+  match b1, b2 with
+  | .true, .true => .false
+  | _, _ => .true
+]]
 
 /-!
 ### Exercise: 1 star, standard (andb3)
@@ -1161,7 +1186,11 @@ Define the function andb3 that returns true when all of its inputs are true, and
 Hint: You can use pattern matching on all three arguments at once.
 -/
 
-def Bool.and3 (b1 b2 b3 : Bool) : Bool := sorry
+def Bool.and3 (b1 b2 b3 : Bool) : Bool := solution[[
+  match b1, b2, b3 with
+  | .true, .true, .true => .true
+  | _, _, _ => .false
+]]
 
 /-!
 ### Exercise: 1 star, standard (identity_fn_applied_twice)
@@ -1173,8 +1202,14 @@ Hint: You'll need to use case analysis on the boolean argument.
 theorem identity_fn_applied_twice :
   ∀ (f : Bool → Bool),
   (∀ (x : Bool), f x = x) →
-  ∀ (b : Bool), f (f b) = b := by
-  sorry
+  ∀ (b : Bool), f (f b) = b
+:= by
+  solution[[
+    intro f H b
+    rewrite [H]
+    rewrite [H]
+    simp
+  ]]
 
 /-!
 ### Exercise: 1 star, standard (negation_fn_applied_twice)
@@ -1186,8 +1221,14 @@ Hint: This is similar to the previous exercise, but you'll need to use the negb 
 theorem negation_fn_applied_twice :
   ∀ (f : Bool → Bool),
   (∀ (x : Bool), f x = x.not) →
-  ∀ (b : Bool), f (f b) = b := by
-  sorry
+  ∀ (b : Bool), f (f b) = b
+:= by
+  solution[[
+    intro f H b
+    rewrite [H]
+    rewrite [H]
+    apply Bool.not_not
+  ]]
 
 /-!
 ### Exercise: 3 stars, standard (andb_eq_orb)
@@ -1199,8 +1240,18 @@ Hint: You'll need to use case analysis on both boolean arguments.
 theorem andb_eq_orb :
   ∀ (b c : Bool),
   (b.and c = b.or c) →
-  b = c := by
-  sorry
+  b = c
+:= by
+  solution[[
+    intro b c H
+    cases b with
+    | true => cases c with
+      | true => eq_refl
+      | false => contradiction
+    | false => cases c with
+      | true => contradiction
+      | false => eq_refl
+  ]]
 
 /-!
 ### Exercise: 3 stars, standard (binary)

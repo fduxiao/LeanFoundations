@@ -72,19 +72,19 @@ end MyDSimp
 
 namespace Solution
 
-macro "solution" "[" x:term "]": term => `($x)
+macro "solution[[" x:term "]]": term => `($x)
 
-elab "solution" "[" x:tacticSeq "]": tactic => do
+elab "solution[[" x:tacticSeq "]]": tactic => do
   Lean.Elab.Tactic.evalTactic x.raw
 
 
-def add5: Nat -> Nat := solution[
+def add5: Nat -> Nat := solution[[
   λ x => x + 5
-]
+]]
 
 example : add5 3 = 8 := by
-  solution[
+  solution[[
     simp [add5]
-  ]
+  ]]
 
 end Solution
