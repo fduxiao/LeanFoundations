@@ -180,7 +180,7 @@ We *could* define separate list types for each element type we need:
 inductive BoolList : Type where
   | nil : BoolList                      -- Empty boolean list
   | cons : Bool → BoolList → BoolList   -- Add a boolean to the front of a list
-deriving Repr
+
 
 /-!
 But this approach has serious drawbacks:
@@ -199,7 +199,7 @@ Instead, we can define a single polymorphic list type that works for any element
 inductive MyList (α : Type) : Type where
   | nil : MyList α                       -- Empty list of α elements
   | cons : α → MyList α → MyList α       -- Add an α element to a list of α elements
-deriving Repr
+
 
 /-!
 > To type the `α`, type `\alpha` in vscode.
@@ -389,7 +389,7 @@ combines two values that can have different types.
 structure MyPair (α β : Type) : Type where
   first : α    -- First component of type α
   second : β   -- Second component of type β
-deriving Repr
+
 
 /-!
 This structure takes two type parameters, `α` and `β`, which can be completely
@@ -433,7 +433,7 @@ a polymorphic `Option` type for this purpose:
 inductive MyOption (α : Type) : Type where
   | some : α → MyOption α              -- Contains a value of type α
   | none : MyOption α                  -- Represents "no value"
-deriving Repr
+
 
 /-!
 The `MyOption α` type represents either:

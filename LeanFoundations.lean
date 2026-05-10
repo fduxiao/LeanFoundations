@@ -32,7 +32,7 @@ mathematical induction on them).
 The whole book is built on
 [this Github repository](https://github.com/fduxiao/LeanFoundations).
 It is just an ordinary Lean package where the `module comments` are compiled
-as descriptions in this book, while the Lean codes are displayed with
+as descriptions in this book, while the Lean code is displayed with
 a light green background. You can clone the repository, download the
 [source code](../LeanFoundations.zip), or just make your own `lake project`
 and copy those lines.
@@ -51,14 +51,12 @@ and copy those lines.
 ## Install Lean
 
 ### Command line
-I prefer installing everything through CLI.
-
 First, install [elan](https://github.com/leanprover/elan), the Lean version manager.
 ```shell
 curl https://elan.lean-lang.org/elan-init.sh -sSf | sh
 ```
 
-Then, install toolchains
+Then, install toolchains.
 ```shell
 elan self update
 elan default leanprover/lean4:stable
@@ -82,7 +80,6 @@ lake build
 -/
 
 /-!
-# Reference
-- [Software Foundations (SF)][Pierce:SF1]
-- [Programming Language Foundations in Agda (PLFA)][plfa22_08]
+# References
+See [here](../references.html).
 -/

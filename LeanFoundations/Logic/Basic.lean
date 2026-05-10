@@ -10,14 +10,14 @@ import LeanFoundations.MyTactics
 
 
 /-!
-In this file, we basically have two things: formal lean codes and comments.
-Lean codes are just what they are called and comments are lines of natural
+In this file, we basically have two things: formal Lean code and comments.
+Lean code is just what it is called and comments are lines of natural
 language encompassed in /- -/
 
-Though to write a lean program only requires those lean codes, sometimes it
+Though to write a Lean program only requires Lean code, sometimes it
 is helpful to explain them in natural language. In fact, this file is written
 as it is a book, where most lines are comments with relatively less
-lean codes.
+Lean code.
 
 Besides, `/-! -/` is used for `markdown` display, i.e., we can have
 headers(#), citations(>), etc.
@@ -34,7 +34,7 @@ Another variant of comment is `--` followed by a `newline`. For example
 
 The core of modern computer proof assistants is [type theory][sorensen2006lectures]
 (λ-calculus), i.e. functional programming. This chapter is intended to introduce
-some basics about functional programming in `lean`. In (dependent) type
+some basics about functional programming in Lean. In (dependent) type
 theory, we give a lot of **rules** to determine valid judgements `term: type`.
 Functions are just a special rule to form a certain type, and proofs are
 just the judgement `proof: proposition`, as is the Curry-Howard
@@ -66,7 +66,6 @@ inductive Day where
   | Thursday -- the `: Day` can be omitted since it can be infered from the context
   | Friday
   | Saturday | Sunday -- you can write these constructors in one line
-deriving Repr -- This line is only for some technical reason, indicating you can display `Day` by its constructors
 
 /-!
 As in set theory, things we concern are approximately series of **judgements**
@@ -106,7 +105,7 @@ with the same *constructor* names, we won't fall into a name conflict.
 inductive Weekend: Type where
   | Sunday
   | Saturday
-  deriving Repr
+
 
 #check Weekend.Sunday
 
@@ -119,7 +118,7 @@ open Weekend
 
 /-!
 Namespaces can also be defined manually. This is helpful if you want to
-define something with existing names. For example, `lean` has provided the
+define something with existing names. For example, Lean has provided the
 type `Bool` with constructors `true` and `false`. To show you how to define
 it from scratch, I have to define my own `Bool` using a different name
 `MyBool`, or I can use a `namespace` to avoid it.
@@ -128,13 +127,12 @@ it from scratch, I have to define my own `Bool` using a different name
 inductive MyBool where
   | true
   | false
-  deriving Repr
+
 
 namespace scratch
 
 inductive Bool where
   | true | false
-  deriving Repr
 
 end scratch
 
@@ -147,7 +145,7 @@ logic in intuitionistic logc. We can put those classical axioms in a
 namespace to use them if necessary.
 
 > Lean also provides such a namespace called `Classical`, and
-> **`lean` is classical by default**, even if you don't open the
+> **Lean is classical by default**, even if you don't open the
 >`Classical` namespace.
 
 -/
@@ -203,7 +201,7 @@ by [Whitehead and Russell][cardone2006history], and Church chose
 $\lambda x. x^2$ as the final notation. This way to define a function is
 called *λ-abstraction*.
 
-In `lean`, we also define functions in this style. Besides, you also specify
+In Lean, we also define functions in this style. Besides, you also specify
 the `type` for each term. In the above example, $\mathbb{R}$ is the type of
 real numbers with rules $0,1,2:\mathbb{R}$, and given $x: \mathbb{R}$,
 $x^2: \mathbb{R}$. Then, $λx.x^2: \mathbb{R} \to \mathbb{R}$ is the rule to
@@ -211,7 +209,7 @@ construct a function as well as its type.
 
 So, the `next_weekday` is some
   `λ (w: Day). if w matches Monday, then Tuesday; ...`
-In `lean`, we write it as follows.
+In `Lean`, we write it as follows.
 -/
 
 /--
@@ -306,9 +304,15 @@ def day_eq_b: Day -> Day -> Bool := fun d1 =>
 #eval ((day_eq_b .Friday) .Friday)
 #eval ((day_eq_b .Sunday) .Saturday)
 
-/-! Some other examples. -/
-def ABA: Day -> Bool -> Day := λ a => λ b => a
-def ABB: Day -> Bool -> Bool := λ a => λ b => b
+/-!
+Some other examples.
+-/
+def ABA: Day -> Bool -> Day := λ a => λ _b => a
+def ABB: Day -> Bool -> Bool := λ _a => λ b => b
+/-!
+> You could write `λ a => λ b => a`, but Lean will complain that `b` is not used.
+> To satisfy Lean, we put an underscore `_` before `b` to indicate that it is an unused variable.
+-/
 
 /-!
 Since we define $\to$ to be right-associative, the application
@@ -321,8 +325,8 @@ This also suggests a simpler way to define curried functions.
 (Note that `day_eq_b'` is slightly different from `day_eq_b`.)
 -/
 
-def ABA': Day -> Bool -> Day := λ a b => a
-def ABB': Day -> Bool -> Bool := λ a b => b
+def ABA': Day -> Bool -> Day := λ a _b => a
+def ABB': Day -> Bool -> Bool := λ _a b => b
 
 
 def day_eq_b': Day -> Day -> Bool := fun d1 d2 =>
@@ -365,7 +369,7 @@ function. For example, the semantics of the above `next_day` can be
 interpreted as: for every `w: Day`, we want to find a term of type `Day`
 for the application `next_day w`, i.e., the following. This *sweeter*
 way to write down the same thing with a different syntax is called a
-**syntactic sugar**. (Note the prime `'` after the name. In `lean`, we are
+**syntactic sugar**. (Note the prime `'` after the name. In Lean, we are
 unable to change a defined name.)
 -/
 
@@ -558,7 +562,6 @@ namespace scratch
 inductive Nat where
   | zero: Nat
   | succ: Nat -> Nat
-  deriving Repr
 
 
 #check Nat.zero.succ
@@ -727,7 +730,7 @@ specify an `a: A` and an `s: A -> A`. Then, `f` is computed by replacing
 
 <br/>
 
-> The real situation in `Lean` is more complicated, see [here](https://leanprover.github.io/theorem_proving_in_lean4/induction_and_recursion.html#well-founded-recursion-and-induction)
+> The real situation in Lean is more complicated, see [here](https://leanprover.github.io/theorem_proving_in_lean4/induction_and_recursion.html#well-founded-recursion-and-induction)
 > for more infomation.
 
 Finally, let's define some arithmetic functions on `Nat`.
@@ -1210,7 +1213,7 @@ inductive Bin where
   | Z
   | B0 (n : Bin)
   | B1 (n : Bin)
-deriving Repr
+
 
 def incr (b : Bin) : Bin :=
   match b with

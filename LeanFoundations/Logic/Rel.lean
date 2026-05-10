@@ -791,7 +791,6 @@ inductive NatAdd where
   | Z : NatAdd
   | S : NatAdd -> NatAdd
   | A : NatAdd -> NatAdd -> NatAdd
-  deriving Repr
 
 /-!
 This mimics the formal system of natural numbers with only the addition operation.

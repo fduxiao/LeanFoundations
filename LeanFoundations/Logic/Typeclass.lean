@@ -361,17 +361,52 @@ Note that we have just made the convention that literal `3` is considered as
 `3`, which does not mean that we interpret all `Nat` as `Bool`, for example,
 `(3: Nat) + true` is still not allowed.
 
-And, finally, we can explain the meaning of `deriving Repr`. In Lean, if you
-want to _pretty print_ a term (e.g., `#eval`, `#print` or use `IO`), you have
-to tell Lean how to translate it into a `String` so Lean can display it.
-This is necessary because there exist terms that are not defined as pure
-Lean code, e.g., most IO functions. Thus, Lean never assumes the `String`
-representation unless you define it or tell Lean to `derive` by adding
-`deriving Repr`.
-
 For more Lean-predefined typeclasses, see
 [here](https://lean-lang.org/functional_programming_in_lean/Overloading-and-Type-Classes/Standard-Classes/).
 -/
+
+/-!
+### Auto Derivation
+Sometimes, Lean could figure out the instance of a typeclass by itself. For example, if you want
+to _pretty print_ a term (e.g., `#eval`, `#print` or use `IO`), you have
+to tell Lean how to translate it into a `String` so Lean can display it.
+This is specified by the `Repr` typeclass.
+```lean
+class Repr (α : Type u) where
+  reprPrec : α → Nat → Format
+```
+Despite the complicated definition, you can just think of it as a function `α -> String`
+that translates a term of type `α` into a `String`.
+-/
+
+namespace ReprExample
+
+inductive Bool where
+  | true
+  | false
+
+#eval Bool.true  -- ReprExample.Bool.true
+
+instance: Repr Bool where
+  reprPrec b _ := match b with
+    | Bool.true => "correct"
+    | Bool.false => "wrong"
+
+#eval Bool.true  -- correct
+
+
+/-!
+You can use `deriving Repr` clause to tell Lean to automatically generate a `Repr`
+instance that just prints the constructor names. This is extremely useful for
+type alias (`abbrev`).
+-/
+
+inductive Bool' where
+  | true
+  | false
+deriving Repr
+
+end ReprExample
 
 /-!
 ## Instance Searching
