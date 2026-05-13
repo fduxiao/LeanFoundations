@@ -19,8 +19,6 @@ pip install git+https://github.com/fduxiao/leanbook
 # compile
 leanbook build .
 
-# The compiled book also contains api document, so
-cp -r docbuild/.lake/build/doc .lake/build/doc/api
 python3 -m http.server -b 127.0.0.1 -d .lake/build/doc
 ```
 
