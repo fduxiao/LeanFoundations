@@ -6,7 +6,7 @@ Authors: Xiao Tan and Robert Joseph George
 -/
 
 -- Ignore the next line if this is the first time you learn Lean.
-import LeanFoundations.MyTactics
+import LeanFoundations._MyTactics
 
 
 /-!
