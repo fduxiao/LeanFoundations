@@ -369,6 +369,24 @@ theorem Proposition.eqC.or {p p' q q': Proposition}:
       exact Hq.right
 
 
+theorem Proposition.eqC.or1 {p p' q: Proposition}:
+  p.eqC p' -> (p.or q).eqC (p'.or q)
+:= by
+  intro H
+  apply Proposition.eqC.or
+  . exact H
+  . apply Proposition.eqC.refl
+
+
+theorem Proposition.eqC.or2 {p q q': Proposition}:
+  q.eqC q' -> (p.or q).eqC (p.or q')
+:= by
+  intro H
+  apply Proposition.eqC.or
+  . apply Proposition.eqC.refl
+  . exact H
+
+
 theorem Proposition.eqC.and {p p' q q': Proposition}:
   p.eqC p' -> q.eqC q' -> (p.and q).eqC (p'.and q')
 := by
@@ -492,6 +510,84 @@ theorem Proposition.eqC.or_comm {p q: Proposition}:
       simp
 
 
+theorem Proposition.eqC.or_bot {p: Proposition}:
+  (p.or .bot).eqC p
+:= by
+  and_intros
+  . apply Context.provesC.orE (p := p) (q := .bot)
+    . apply Context.provesC.ax
+      simp
+    . apply Context.provesC.ax
+      simp
+    . apply Context.provesC.botE
+      apply Context.provesC.ax
+      simp
+  . apply Context.provesC.orI1
+    simp
+
+
+theorem Proposition.eqC.bot_or {p: Proposition}:
+  (Proposition.bot.or p).eqC p
+:= by
+  apply Proposition.eqC.trans
+  . apply Proposition.eqC.or_comm
+  apply Proposition.eqC.or_bot
+
+
+theorem Proposition.eqC.or_top {p: Proposition}:
+  (p.or .top).eqC .top
+:= by
+  and_intros
+  . apply Context.provesC.topI
+  . apply Context.provesC.orI2
+    apply Context.provesC.topI
+
+
+theorem Proposition.eqC.top_or {p: Proposition}:
+  (Proposition.top.or p).eqC .top
+:= by
+  apply Proposition.eqC.trans
+  . apply Proposition.eqC.or_comm
+  apply Proposition.eqC.or_top
+
+
+theorem Proposition.eqC.or_assoc {p q r: Proposition}:
+  (p.or (q.or r)).eqC ((p.or q).or r)
+:= by
+  and_intros
+  . apply Context.provesC.orE (p := p) (q := q.or r)
+    . simp
+    . apply Context.provesC.orI1
+      apply Context.provesC.orI1
+      apply Context.provesC.ax
+      simp
+    . apply Context.provesC.orE (p := q) (q := r)
+      . simp
+      . apply Context.provesC.orI1
+        apply Context.provesC.orI2
+        apply Context.provesC.ax
+        simp
+      . apply Context.provesC.orI2
+        apply Context.provesC.ax
+        simp
+  . unfold leC
+    apply Context.provesC.orE (p := p.or q) (q := r)
+    . simp
+    . apply Context.provesC.orE (p := p) (q := q)
+      . simp
+      . apply Context.provesC.orI1
+        apply Context.provesC.ax
+        simp
+      . apply Context.provesC.orI2
+        apply Context.provesC.orI1
+        apply Context.provesC.ax
+        simp
+    . apply Context.provesC.orI2
+      apply Context.provesC.orI2
+      apply Context.provesC.ax
+      simp
+
+
 theorem Proposition.eqC.or_and_distrib {p q r: Proposition}:
   (p.or (q.and r)).eqC ((p.or q).and (p.or r))
 := by
@@ -543,10 +639,12 @@ theorem Proposition.eqC.or_and_distrib' {p q r: Proposition}:
   . apply Proposition.eqC.or_and_distrib
   -- Now, it is `((r.or p).and (r.or q)).eqC ((p.or r).and (q.or r))`
   apply Proposition.eqC.and
-  solution[[
-    . apply Proposition.eqC.or_comm
-    . apply Proposition.eqC.or_comm
-  ]]
+  . solution[[
+      apply Proposition.eqC.or_comm
+    ]]
+  . solution[[
+      apply Proposition.eqC.or_comm
+    ]]
 
 
 theorem Proposition.eqC.not_top:
@@ -568,6 +666,22 @@ theorem Proposition.eqC.not_bot:
   . apply Context.provesC.impI
     apply Context.provesC.ax
     simp
+
+
+theorem Proposition.eqC.em {p: Proposition}:
+  (p.or p.not).eqC .top
+:= by
+  and_intros
+  . apply Context.provesC.topI
+  . apply Context.provesC.em
+
+
+theorem Proposition.eqC.em' {p: Proposition}:
+  (p.not.or p).eqC .top
+:= by
+  apply Proposition.eqC.trans
+  . apply Proposition.eqC.or_comm
+  . apply Proposition.eqC.em
 
 
 theorem Proposition.eqC.deMorgan_or {p q: Proposition}:
@@ -889,9 +1003,8 @@ theorem conj_not_disj_conj {p: Proposition}:
     simp [conj_not]
     apply Conj.top
   case single p H =>
-    cases H
-    all_goals
-      simp [conj_not]
+    cases H <;>
+    . simp [conj_not]
       apply Conj.single
       apply Disj.single
       constructor
@@ -995,10 +1108,262 @@ theorem CNF_exists (p: Proposition):
       ]]
 
 
+def disj_split: Proposition -> List (String × Bool)
+  | .var x => [(x, true)]
+  | .not (.var x) => [(x, false)]
+  | .or p q => disj_split p ++ disj_split q
+  | _ => []
+
+
+def disj_join: List (String × Bool) -> Proposition
+  | [] => .bot
+  | (x, b)::xs =>
+    let p := if b then Proposition.var x else (Proposition.var x).not
+    p.or (disj_join xs)
+
+
+theorem disj_join_append {xs ys: List (String × Bool)}:
+  (disj_join (xs ++ ys)).eqC ((disj_join xs).or (disj_join ys))
+:= by
+  induction xs
+  case nil =>
+    simp [disj_join]
+    apply Proposition.eqC.bot_or.symm
+  case cons x xs IH =>
+    simp [disj_join]
+    split <;>
+    . apply Proposition.eqC.trans
+      . apply IH.or2
+      . apply Proposition.eqC.or_assoc
+
+
+theorem disj_join_split {p: Proposition}:
+  Disj p -> (disj_join (disj_split p)).eqC p
+:= by
+  intro H
+  induction H
+  case bot =>
+    simp [disj_split, disj_join]
+  case single p H =>
+    cases H <;>
+    . simp [disj_split, disj_join]
+      apply Proposition.eqC.or_bot
+  case or p1 p2 H1 H2 IH1 IH2 =>
+    simp [disj_split]
+    apply Proposition.eqC.trans
+    . apply disj_join_append
+    apply Proposition.eqC.or
+    . exact IH1
+    . exact IH2
+
+
+theorem disj_join_perm {l1 l2: List (String × Bool)}:
+   l1.Perm l2 -> (disj_join l1).eqC (disj_join l2)
+:= by
+  intro H
+  induction H
+  case nil =>
+    simp [disj_join]
+  case cons x xs ys H IH =>
+    simp [disj_join]
+    split <;>
+    . apply Proposition.eqC.or2
+      exact IH
+  case swap x y l =>
+    simp [disj_join]
+    split <;>
+    . split <;>
+      . apply Proposition.eqC.or_assoc.trans
+        apply Proposition.eqC.symm
+        apply Proposition.eqC.or_assoc.trans
+        apply Proposition.eqC.or1
+        apply Proposition.eqC.or_comm
+  case trans l1 l2 l3 P12 P23 IH12 IH23 =>
+    apply Proposition.eqC.trans
+    . exact IH12
+    . exact IH23
+
+
+def disj_eval (l: List (String × Bool)) (e: Eval): Bool :=
+  match l with
+  | [] => false
+  | (x, b) :: xs =>
+    let v := e x
+    if b then v || disj_eval xs e else (!v) || disj_eval xs e
+
+
+theorem disj_eval_perm {l1 l2: List (String × Bool)}:
+  l1.Perm l2 ->
+  forall e: Eval, disj_eval l1 e = disj_eval l2 e
+:= by
+  intro H e
+  induction H
+  case nil =>
+    simp [disj_eval]
+  case cons x xs ys H IH =>
+    simp [disj_eval]
+    simp [IH]
+  case swap x y l =>
+    simp [disj_eval]
+    grind
+  case trans l1 l2 l3 P12 P23 IH12 IH23 =>
+    simp_all
+
+
+theorem disj_eval_join_eq {l: List (String × Bool)}:
+  forall e: Eval, disj_eval l e = e.eval (disj_join l)
+:= by
+  intro e
+  induction l
+  case nil =>
+    simp [disj_join, disj_eval, Eval.eval]
+  case cons x xs IH =>
+    simp [disj_join, disj_eval, Eval.eval]
+    rewrite [IH]
+    rcases x with ⟨x, b⟩
+    split
+    . simp [Eval.eval]
+    . simp [Eval.eval]
+
+
+def split_at (l: List (String × Bool)) (x: String) (b: Bool):
+  Option (List (String × Bool) × List (String × Bool))
+:= match l with
+  | [] => none
+  | (y, c) :: ys =>
+    if x == y && b == c then some ([], ys)
+    else
+      match split_at ys x b with
+      | none => none
+      | some (l1, l2) => some ((y, c) :: l1, l2)
+
+
+theorem split_at_some {l l1 l2: List (String × Bool)} {x: String} {b: Bool}:
+  split_at l x b = some (l1, l2) -> l = l1 ++ (x, b) :: l2
+:= by
+  intro H
+  induction l generalizing l1 l2
+  case nil =>
+    simp [split_at] at H
+  case cons y ys IH =>
+    simp [split_at] at H
+    split at H
+    . cases H
+      simp_all
+    . split at H
+      . -- none
+        cases H
+      . cases H
+        simp
+        apply IH
+        assumption
+
+
+theorem split_at_none {l: List (String × Bool)} {x: String} {b: Bool}:
+  split_at l x b = none ->
+  split_at l x (!b) = none ->
+  forall b' e, disj_eval l e = disj_eval l (fun y => if y == x then b' else e y)
+:= by
+  intro H1 H2 b' e
+  induction l
+  case nil =>
+    simp [disj_eval]
+  case cons y ys IH =>
+    simp [split_at] at H1 H2
+    split at H1 <;> try contradiction
+    split at H1 <;> try contradiction
+    rename_i E1
+    split at H2 <;> try contradiction
+    split at H2 <;> try contradiction
+    rename_i E2
+    specialize IH E1 E2
+    simp [disj_eval]
+    simp [IH]
+    grind
+
+
+theorem disj_split_tautology {l: List (String × Bool)}:
+  (forall e: Eval, disj_eval l e = true) -> (disj_join l).eqC .top
+:= by
+  intro H
+  induction l
+  case nil =>
+    specialize H (fun _ => false)
+    simp only [disj_eval] at H
+    cases H
+  case cons x xs IH =>
+    rcases x with ⟨x, b⟩
+    cases E: split_at xs x (!b)
+    case some l =>
+      rcases l with ⟨l1, l2⟩
+      replace E := split_at_some E
+      let xs' := (x, !b) :: (l1 ++ l2)
+      have P: List.Perm ((x, b)::xs) ((x, b)::xs') := by
+        grind
+      apply (disj_join_perm P).trans
+      simp [disj_join, xs']
+      split <;>
+      . simp_all
+        apply Proposition.eqC.trans
+        . apply Proposition.eqC.or_assoc
+        apply Proposition.eqC.trans
+        . apply Proposition.eqC.or1
+          first | apply Proposition.eqC.em | apply Proposition.eqC.em'
+        apply Proposition.eqC.top_or
+    case none =>
+      -- We must have `disj_eval xs e = true` for all `e`.
+      have H: forall e: Eval, disj_eval xs e = true := by
+        intro e
+        cases I: disj_eval xs e
+        case true =>
+          eq_refl
+        case false =>
+          let e' := fun y => if y == x then !b else e y
+          have I': disj_eval xs e' = false := by
+            rewrite [<-I]
+            symm
+            apply split_at_none _ E
+            cases E': split_at xs x b
+            case none =>
+              eq_refl
+            case some l =>
+              specialize H e
+              simp [disj_eval, I] at H
+              rcases l with ⟨l1, l2⟩
+              replace E' := split_at_some E'
+              let xs' := (x, b) :: (l1 ++ l2)
+              have P: List.Perm xs xs' := by grind
+              rewrite [disj_eval_perm P] at I
+              simp [disj_eval, xs'] at I
+              split at H
+              . simp_all
+              . simp_all
+          let H' := H e'
+          simp only [disj_eval] at H'
+          simp [I'] at H'
+          -- note that we choose `e' x = !b`
+          simp [e'] at H'
+      specialize IH H
+      simp [disj_join]
+      apply Proposition.eqC.trans
+      . apply Proposition.eqC.or2
+        exact IH
+      . apply Proposition.eqC.or_top
+
+
 theorem tautology_disj_top {p: Proposition}:
   Context.entailsC [] p -> Disj p -> p.eqC .top
 := by
-  admit
+  intro T D
+  let l := disj_split p
+  have E: (disj_join l).eqC p := disj_join_split D
+  apply E.symm.trans
+  apply disj_split_tautology
+  intro e
+  rewrite [disj_eval_join_eq]
+  rewrite [E.eval]
+  apply T
+  simp
 
 
 theorem tautology_conj_top {p: Proposition}:
