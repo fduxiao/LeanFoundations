@@ -1476,6 +1476,40 @@ inductive Context.proves: Context -> Proposition -> Prop where
   | orE {Γ: Context} {p q r} : Γ.proves (Proposition.or p q) -> (Γ.add p).proves r -> (Γ.add q).proves r -> Γ.proves r
 
 
+theorem Context.proves.permute {Γ Γ': Context} {p}:
+  Γ.proves p ->
+  Γ.Perm Γ' ->
+  Context.proves Γ' p
+:= by
+  intro H P
+  induction H generalizing Γ'
+    <;> try grind [Context.proves]
+  case impI Γ p q H IH =>
+    apply Context.proves.impI
+    simp [Context.add] at *
+    apply IH
+    simp
+    exact P
+  case orE Γ p q r H H1 H2 IH IH1 IH2 =>
+    apply Context.proves.orE
+    . apply IH P
+    . apply IH1
+      simp
+      exact P
+    . apply IH2
+      simp
+      exact P
+
+
+theorem Context.proves.weaken {Γ Γ': Context} {p}:
+  Γ.proves p ->
+  Γ.Sublist Γ' ->
+  Context.proves (Γ') p
+:= by
+  intro H R
+  induction H generalizing Γ'
+    <;> grind [Context.proves]
+
 
 /-!
 ### Semantics
@@ -1485,16 +1519,688 @@ as the semantic model for intuitionistic logic. It turns out that Kripke models 
 of Heyting algebra in some [presheaves category][maclane2012sheaves].
 -/
 
-/-!
-### Soundness and Completeness
--/
+
+structure Kripke where
+  W: Type
+  R: W -> W -> Prop
+  R_refl: forall {w: W}, R w w
+  R_trans: forall {w1 w2 w3: W}, R w1 w2 -> R w2 w3 -> R w1 w3
+
+  Cover: List W -> W -> Prop
+  Cover_nonempty: forall {w}, ¬ Cover [] w
+  Cover_R: forall {C: List W} {w: W}, Cover C w -> forall (w': W), w' ∈ C -> R w w'
+  Cover_self: forall {w: W}, Cover [w] w
+  /-
+  Stability as in Mac Lane's _Sheaves in Geometry and Logic_.
+  -/
+  Cover_pullback: forall {C w u},
+    Cover C w ->
+    R w u ->
+    exists D, Cover D u ∧ (forall u', u' ∈ D -> exists w', w' ∈ C ∧ R w' u')
+  Cover_trans: forall {C w} {P: W -> Prop},
+    Cover C w ->
+    (f: forall w', w' ∈ C -> exists D, Cover D w' ∧ forall w'', w'' ∈ D -> P w'') ->
+    exists D, Cover D w ∧ (forall w'', w'' ∈ D -> P w'')
+
+  F: W -> String -> Prop
+  F_monotone: forall {w1 w2 x}, R w1 w2 -> F w1 x -> F w2 x
+  F_cover: forall {C w x}, Cover C w -> (forall w', w' ∈ C -> F w' x) -> F w x
+
+
+def Kripke.forces (K: Kripke) (w: K.W) (p: Proposition): Prop :=
+  match p with
+  | .var x => K.F w x
+  | .top => True
+  | .bot => False
+  | .and p q => K.forces w p ∧ K.forces w q
+  | .or p q => exists C: List K.W, K.Cover C w ∧ (forall w', w' ∈ C -> K.forces w' p ∨ K.forces w' q)
+  | .imp p q => forall w', K.R w w' -> K.forces w' p -> K.forces w' q
+
+
+theorem Kripke.forces_weak {K: Kripke} {w1 w2: K.W} {p: Proposition}:
+  K.R w1 w2 -> K.forces w1 p -> K.forces w2 p
+:= by
+  intro R F
+  induction p generalizing w1 w2
+  case var x =>
+    apply K.F_monotone
+    . exact R
+    . exact F
+  case top =>
+    simp [Kripke.forces]
+  case bot =>
+    simp [Kripke.forces] at F
+  case and p1 p2 IH1 IH2 =>
+    simp [Kripke.forces] at *
+    grind
+  case imp p1 p2 IH1 IH2 =>
+    intro w2' R' F'
+    have R'': K.R w1 w2' := K.R_trans R R'
+    apply F
+    . apply K.R_trans R R'
+    . exact F'
+  case or p1 p2 IH1 IH2 =>
+    simp [Kripke.forces] at F
+    rcases F with ⟨C, HC, H⟩
+    rcases K.Cover_pullback HC R with ⟨D, HD, S⟩
+    exists D
+    and_intros
+    . exact HD
+    . intro w' I
+      rcases S w' I with ⟨w'', I'', R'⟩
+      specialize H w'' I''
+      cases H with
+      | inl H =>
+        left
+        apply IH1 R'
+        exact H
+      | inr H =>
+        right
+        apply IH2 R'
+        exact H
+
+
+theorem Kripke.forces_cover {K: Kripke} {C: List K.W} {w: K.W} {p: Proposition}:
+  K.Cover C w -> (forall w', w' ∈ C -> K.forces w' p) -> K.forces w p
+:= by
+  intro HC H
+  induction p generalizing C w
+  case var x =>
+    apply K.F_cover HC
+    exact H
+  case top =>
+    simp [Kripke.forces]
+  case bot =>
+    cases C
+    case nil =>
+      exfalso
+      apply K.Cover_nonempty HC
+    case cons w' C =>
+      specialize H w' (by simp)
+      simp [Kripke.forces] at H
+  case and p1 p2 IH1 IH2 =>
+    simp [Kripke.forces] at *
+    solution[[
+      grind
+    ]]
+  case imp p1 p2 IH1 IH2 =>
+    intro w' R F
+    rcases K.Cover_pullback HC R with ⟨D, HD, S⟩
+    apply IH2 HD
+    intro w'' I
+    rcases S w'' I with ⟨w''', I', R'⟩
+    specialize H w''' I'
+    apply H
+    . exact R'
+    . apply Kripke.forces_weak _ F
+      apply K.Cover_R
+      . exact HD
+      . exact I
+  case or p1 p2 IH1 IH2 =>
+    let P := fun w: K.W => K.forces w p1 ∨ K.forces w p2
+    have f: ∀ (w' : K.W), w' ∈ C → ∃ D, K.Cover D w' ∧ forall w'', w'' ∈ D -> P w'' := by
+      intro w' I
+      simp [P]
+      specialize H w' I
+      rcases H with ⟨D, HD, H⟩
+      exists D
+    rcases K.Cover_trans HC f with ⟨D, HD, T⟩
+    exists D
+
+
+def Context.entails (Γ: Context) (p: Proposition): Prop :=
+  forall K: Kripke, forall w: K.W, (forall q, q ∈ Γ -> K.forces w q) -> K.forces w p
 
 /-!
-## Glivenko's theorem
+### Soundness
 -/
+
+theorem soundness {Γ: Context} {p}:
+  Γ.proves p -> Γ.entails p
+:= by
+  intro H K w S
+  induction H generalizing K w
+  case ax I =>
+    apply S
+    exact I
+  case topI =>
+    simp [Kripke.forces]
+  case botE Γ p H IH =>
+    specialize IH K w S
+    simp [Kripke.forces] at IH
+  case andI Γ p q H1 H2 IH1 IH2 =>
+    simp [Kripke.forces]
+    and_intros
+    . apply IH1
+      exact S
+    . apply IH2
+      exact S
+  case andE1 Γ p q H IH | andE2 Γ p q H IH =>
+    specialize IH K w S
+    simp [Kripke.forces] at IH
+    simp_all
+  case impI Γ p q H IH =>
+    simp [Kripke.forces]
+    intro w' R F
+    apply IH
+    intro r I
+    simp at I
+    cases I with
+    | inl I =>
+      simp_all
+    | inr I =>
+      apply Kripke.forces_weak R
+      apply S
+      exact I
+  case impE Γ p q H1 H2 IH1 IH2 =>
+    specialize IH1 K w S w
+    apply IH1
+    . apply K.R_refl
+    . apply IH2
+      exact S
+  case orI1 Γ p q H IH | orI2 Γ p q H IH =>
+    simp [Kripke.forces]
+    specialize IH K w S
+    exists [w]
+    and_intros
+    . apply K.Cover_self
+    . intro w' I
+      simp_all
+  case orE Γ p q r H1 H2 H3 IH1 IH2 IH3 =>
+    specialize IH1 K w S
+    simp [Kripke.forces] at IH1
+    rcases IH1 with ⟨C, HC, H⟩
+    apply Kripke.forces_cover HC
+    intro w' I
+    specialize H w' I
+    have R: K.R w w' := K.Cover_R HC _ I
+    cases H with
+    | inl H =>
+      apply IH2
+      intro a I'
+      simp at I'
+      cases I' with
+      | inl I' =>
+        simp_all
+      | inr I' =>
+        apply Kripke.forces_weak R
+        apply S
+        exact I'
+    | inr H =>
+      apply IH3
+      intro a I'
+      simp at I'
+      cases I' with
+      | inl I' =>
+        simp_all
+      | inr I' =>
+        apply Kripke.forces_weak R
+        apply S
+        exact I'
+
+
+/-!
+### Completeness
+-/
+
+axiom Context.decide (Γ: Context) p: Decidable (Γ.proves p)
+
+namespace UniversalModel
+
+
+def World: Type := {Γ: Context // ¬ Γ.proves .bot}
+
+def Cover (C: List World) (w: World): Prop :=
+  (¬ C = []) ∧
+  (forall w', w' ∈ C -> w.val.Sublist w'.val) ∧
+  forall {p}, (forall w, w ∈ C -> w.val.proves p) -> w.val.proves p
+
+
+theorem Cover.exists {C: List World} {w: World}:
+  Cover C w ->
+  exists w', w' ∈ C ∧ w.val.Sublist w'.val
+:= by
+  intro HC
+  cases C
+  case nil =>
+    simp [Cover] at HC
+  case cons w' C =>
+    exists w'
+    simp_all [Cover]
+
+
+theorem Cover.sub {C: List World} {w: World}:
+  Cover C w ->
+  forall w', w' ∈ C -> w.val.Sublist w'.val
+:= by
+  simp_all [Cover]
+
+
+theorem Cover.proves {C: List World} {w: World}:
+  Cover C w ->
+  forall {p}, (forall w, w ∈ C -> w.val.proves p) -> w.val.proves p
+:= by
+  simp_all [Cover]
+
+
+def mapWithIn {A B} (l: List A) (f: (x: A) -> (x ∈ l) -> B): List B :=
+  match l with
+  | [] => []
+  | x :: xs =>
+    let b := f x (by simp)
+    let bs := mapWithIn xs (fun y I => f y (by simp [I]))
+    b :: bs
+
+
+theorem mapWithIn_spec {A B} {l: List A} {f: (x: A) -> (x ∈ l) -> B}:
+  forall {y}, y ∈ mapWithIn l f <-> exists x, exists I: x ∈ l, y = f x I
+:= by
+  induction l
+  case nil =>
+    simp [mapWithIn]
+  case cons x xs IH =>
+    simp [mapWithIn]
+    grind
+
+
+def multiImp (Γ: Context) (p: Proposition): Proposition :=
+  match Γ with
+  | [] => p
+  | q :: qs => q.imp (multiImp qs p)
+
+
+theorem multiImp_iff {Δ Γ: Context} {p: Proposition}:
+  (Δ ++ Γ).proves p <-> Γ.proves (multiImp Δ p)
+:= by
+  induction Δ generalizing Γ p
+  case nil =>
+    simp [multiImp]
+  case cons q Δ IH =>
+    simp [multiImp]
+    apply Iff.intro
+    . intro H
+      apply Context.proves.impI
+      apply IH.mp
+      apply H.permute
+      simp [Context.add]
+      apply List.perm_comm.mp
+      simp
+    . intro H
+      replace H: Context.proves (q :: Γ) (multiImp Δ p) := by
+        apply Context.proves.impE
+        . apply H.weaken
+          simp
+        . apply Context.proves.ax
+          simp
+      replace H := IH.mpr H
+      apply H.permute
+      simp
+
+
+theorem weak_append {Γ Γ': Context} {p}:
+  Γ.Sublist Γ' ->
+  Context.proves (Γ' ++ Γ) p ->
+  Γ'.proves p
+:= by
+  intro R H
+  replace H: (Γ ++ Γ').proves p := by
+    apply H.permute
+    apply List.perm_append_comm
+  induction Γ generalizing Γ' p
+  case nil =>
+    simp_all
+  case cons q Γ IH =>
+    replace H := H.impI
+    specialize IH (by grind) H
+    apply IH.impE
+    apply Context.proves.ax
+    grind
+
+
+def Model: Kripke where
+  W := World
+  R := fun w1 w2 => w1.val.Sublist w2.val
+  R_refl := by simp
+  R_trans := by
+    intro w1 w2 w3
+    apply List.Sublist.trans
+
+  Cover := Cover
+  Cover_nonempty := by
+    simp [Cover]
+  Cover_R := by
+    intro C w HC
+    simp [Cover] at HC
+    replace HC := HC.right.left
+    apply HC
+  Cover_self := by
+    intro w
+    unfold Cover
+    grind
+  Cover_pullback := by
+    intro C w u HC R
+    have H: exists L1 L2: List Context,
+      (forall w', w' ∈ C <-> w'.val ∈ L1 ∨ w'.val ∈ L2) ∧
+      (forall Γ: Context, Γ ∈ L1 -> ¬ (u.val ++ Γ).proves .bot) ∧
+      (forall Γ: Context, Γ ∈ L2 -> (u.val ++ Γ).proves .bot)
+    := by
+      clear HC
+      induction C
+      case nil =>
+        exists [], []
+        simp
+      case cons w' C IH =>
+        rcases IH with ⟨L1, L2, I, H1, H2⟩
+        cases (u.val ++ w'.val).decide .bot
+        case isTrue =>
+          exists L1, (w'.val :: L2)
+          grind [Subtype.ext]
+        case isFalse =>
+          exists (w'.val :: L1), L2
+          grind [Subtype.ext]
+    rcases H with ⟨L1, L2, I, H1, H2⟩
+    rcases HC with ⟨NE, S, HC⟩
+    let f: (x: Context) -> (x ∈ L1) -> World := (fun Γ I => ⟨u.val ++ Γ, H1 Γ I⟩)
+    let D: List World := mapWithIn L1 f
+    exists D
+    and_intros
+    . intro E
+      -- Since `D = []`, we must also have `L1 = []`.
+      cases L1
+      case cons => -- This case is impossible, since `D` is forced non-empty.
+        simp [D, mapWithIn] at E
+      -- Now, forall `w'`, `w' ∈ C` iff `w'.val ∈ L2`.
+      simp at I  -- We get that simply by `simp` at `I`.
+      -- This means `u.val ++ w'.val` is inconsistent, i.e. `w'.val ⊢ ¬ u.val`.
+      have H: forall w', w' ∈ C -> w'.val.proves (multiImp u.val .bot) := by
+        intro w' I'
+        apply multiImp_iff.mp
+        apply H2
+        apply (I w').mp
+        exact I'
+      -- Since `C` covers `w`, we can conclude that `w ⊢ ¬ u.val`,
+      specialize HC H
+      -- which makes `u.val ++ w.val` inconsistent,
+      replace HC := multiImp_iff.mpr HC
+      -- which further implies `u` is inconsistent -- a contradiction.
+      replace HC := weak_append R HC
+      apply u.property
+      exact HC
+    . intro u' H
+      replace H := mapWithIn_spec.mp H
+      grind
+    . intro p HD
+      apply weak_append R
+      apply multiImp_iff.mpr
+      apply HC
+      intro w'' I'
+      replace I' := (I w'').mp I'
+      rcases I' with I' | I'
+      . let y: World := ⟨u.val ++ w''.val, H1 w''.val I'⟩
+        replace I': y ∈ D := by
+          apply mapWithIn_spec.mpr
+          exists w''.val, I'
+        specialize HD y I'
+        simp [y] at HD
+        apply multiImp_iff.mp
+        exact HD
+      . apply multiImp_iff.mp
+        specialize H2 _ I'
+        apply H2.botE
+    . intro u' H
+      replace H := mapWithIn_spec.mp H
+      rcases H with ⟨Γ, I', E⟩
+      have _: ¬ Γ.proves .bot := by
+        intro contra
+        apply H1 _ I'
+        apply contra.weaken
+        simp
+      let w': World := ⟨Γ, by assumption⟩
+      exists w'
+      simp_all [w', f]
+  Cover_trans := by
+    intro C w P HC f
+    have HD: exists D: List World,
+      forall x,
+        x ∈ D <->
+        exists w', exists (I: w' ∈ C),
+          x ∈ (f w' I).choose
+    := by
+      clear HC
+      induction C
+      case nil =>
+        exists []
+        -- `x ∈ []` is impossilbe, while `I: w' ∈ []` is also impossible.
+        simp
+      case cons w' ws' IH =>
+        -- We first get the cover `D` of `w`.
+        have I': w' ∈ w' :: ws' := by simp
+        let T := f w' I'
+        let D := T.choose
+        -- Then, we get the accumulated result `D'` of `ws'` from `IH`.
+        have f': ∀ (w' : World),
+            w' ∈ ws' →
+            ∃ D, Cover D w' ∧ ∀ (w'' : World), w'' ∈ D → P w''
+        := by
+          intros w' I'
+          apply f
+          simp_all
+        rcases IH f' with ⟨D', HD'⟩
+        exists (D ++ D')
+        intro x
+        apply Iff.intro
+        . grind
+        . rintro ⟨w'', I'', H''⟩
+          simp at I''
+          rcases I'' with E | I''
+          . let F := f w'' I''
+            simp only [E] at H''
+            replace H'': x ∈ D := by
+              apply H''
+            simp [H'']
+          . grind
+    rcases HD with ⟨D, HD⟩
+    exists D
+    and_intros
+    . intro E
+      rcases HC.exists with ⟨w', I', _⟩
+      -- `C` is not `[]`
+      let T := f w' I'
+      let C' := T.choose
+      let HC' := T.choose_spec.left
+      rcases HC'.exists with ⟨w'', I'', _⟩
+      replace HD := (HD w'').mpr ⟨w', I', I''⟩
+      simp [E] at HD
+    . intro w' I'
+      replace HD := (HD w').mp I'
+      rcases HD with ⟨w'', I'', HD⟩
+      let H := (f w'' I'').choose_spec.left
+      apply List.Sublist.trans
+      . apply HC.sub
+        exact I''
+      . apply H.sub
+        exact HD
+    . intro p H
+      apply HC.proves
+      intro w' I'
+      let T := f w' I'
+      let C' := T.choose
+      let HC' := T.choose_spec.left
+      apply HC'.proves
+      intro w'' I''
+      apply H
+      apply (HD w'').mpr
+      exists w', I'
+    . intro w'' I''
+      -- can be proved by `grind`
+      replace HD := (HD w'').mp I''
+      rcases HD with ⟨w', I', HD⟩
+      let C' := (f w' I').choose
+      let HC' := (f w' I').choose_spec.right
+      apply HC'
+      exact HD
+  F w x := w.val.proves (Proposition.var x)
+  F_monotone := by
+    intro w1 w2 x
+    intro R H
+    apply H.weaken R
+  F_cover {C w x} := by
+    intro HC P
+    apply HC.right.right
+    exact P
+
+
+theorem forces_iff_proves {w: World} {p: Proposition}:
+  Model.forces w p <-> w.val.proves p
+:= by
+  induction p generalizing w
+  case var x =>
+    simp [Kripke.forces, Model]
+  case top =>
+    simp [Kripke.forces]
+    apply Context.proves.topI
+  case bot =>
+    simp [Kripke.forces]
+    exact w.property
+  case and p1 p2 IH1 IH2 =>
+    simp [Kripke.forces]
+    apply Iff.intro
+    . intro H
+      rcases H with ⟨H1, H2⟩
+      replace IH1 := IH1.mp H1
+      replace IH2 := IH2.mp H2
+      exact Context.proves.andI IH1 IH2
+    . intro H
+      have H1 := Context.proves.andE1 H
+      have H2 := Context.proves.andE2 H
+      replace IH1 := IH1.mpr H1
+      replace IH2 := IH2.mpr H2
+      exact ⟨IH1, IH2⟩
+  case or p1 p2 IH1 IH2 =>
+    apply Iff.intro
+    . intro H
+      rcases H with ⟨C, HC, H⟩
+      simp [Model] at HC
+      rcases HC with ⟨N, S, P⟩
+      apply P
+      intro w I
+      specialize H w I
+      rcases H with H | H
+      . replace IH1 := IH1.mp H
+        exact IH1.orI1
+      . replace IH2 := IH2.mp H
+        exact IH2.orI2
+    . intro H
+      rcases w with ⟨Γ, C⟩
+      simp at H
+      let Γ1 := Γ.add p1
+      let Γ2 := Γ.add p2
+      rcases Γ1.decide .bot with C1 | I1
+      case isTrue => -- If p1 :: Γ is inconsistent, then Γ ⊢ p1.
+        replace H: Γ.proves p2 := by
+          apply H.orE
+          . apply I1.botE
+          . apply Context.proves.ax
+            simp
+        -- Since Γ covers itself, we can conclude that Γ ⊩ p1 ∨ p2.
+        exists [⟨Γ, C⟩]
+        simp [Model.Cover_self]
+        right
+        apply IH2.mpr
+        exact H
+      -- Now we have Γ1 is consistent.
+      -- similarly, we discuss whether p2 :: Γ is inconsistent.
+      rcases Γ2.decide .bot with C2 | I2
+      case isTrue => -- We simply prove it by a `grind`.
+        exists [⟨Γ, C⟩]
+        grind [Model.Cover_self, Context.proves]
+      -- Now that both p1 :: Γ and p2 :: Γ are consistent, we can construct a cover.
+      let w1: World := ⟨Γ1, C1⟩
+      let w2: World := ⟨Γ2, C2⟩
+      exists [w1, w2]
+      have K: forall {w}, w ∈ [w1, w2] -> w = w1 ∨ w = w2 := by
+        grind
+      and_intros
+      . simp
+      . intro w I
+        rcases K I with I | I
+        . simp_all [w1, Γ1]
+        . simp_all [w2, Γ2]
+      . intro p HC
+        apply H.orE
+        . apply HC w1
+          apply List.Mem.head
+        . apply HC w2
+          apply List.Mem.tail
+          apply List.Mem.head
+      . intro w' I
+        rcases K I with I | I
+        . simp_all [w1, Γ1]
+          left
+          apply Context.proves.ax
+          simp
+        . simp_all [w2, Γ2]
+          right
+          apply Context.proves.ax
+          simp
+  case imp p1 p2 IH1 IH2 =>
+    apply Iff.intro
+    . intro H
+      let Γ := w.val.add p1
+      rcases Γ.decide .bot with C | I
+      case isTrue =>
+        apply Context.proves.impI
+        apply I.botE
+      case isFalse =>
+        let w': World := ⟨Γ, C⟩
+        have F: Model.forces w' p1 := by
+          apply IH1.mpr
+          simp [w', Γ]
+          apply Context.proves.ax
+          simp
+        specialize H w' (by simp [Model, w', Γ]) F
+        replace IH2 := IH2.mp H
+        apply Context.proves.impI
+        exact IH2
+    . intro H
+      simp [Kripke.forces]
+      intro w' R F
+      replace H: w'.val.proves (p1.imp p2) := by
+        simp [Model] at R
+        apply H.weaken
+        exact R
+      apply IH2.mpr
+      apply Context.proves.impE
+      . exact H
+      . apply IH1.mp
+        exact F
+
+
+end UniversalModel
+
+theorem completeness {Γ: Context} {p}:
+  Γ.entails p -> Γ.proves p
+:= by
+  intro H
+  rcases Γ.decide .bot with C | I
+  case isTrue => -- If Γ is inconsistent, this is obvious.
+    apply I.botE
+  -- We then use the universal model for the consistent case.
+  have K: forall p, p ∈ Γ -> UniversalModel.Model.forces ⟨Γ, C⟩ p := by
+    intro p I
+    apply UniversalModel.forces_iff_proves.mpr
+    apply Context.proves.ax
+    exact I
+  specialize H UniversalModel.Model ⟨Γ, C⟩ K
+  replace H := UniversalModel.forces_iff_proves.mp H
+  exact H
 
 /-!
 ## λ-Calculus and Curry-Howard Correspondence
+-/
+
+/-!
+### Glivenko's theorem
 -/
 
 end PropLogic
