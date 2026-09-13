@@ -4,6 +4,7 @@ Released under MIT license as described in the file LICENSE.
 Authors: Xiao Tan and Robert Joseph George
 -/
 
+import LeanFoundations._MyTactics
 import LeanFoundations.Logic.Basic
 
 /-!
@@ -65,7 +66,8 @@ In Lean, we could try to prove this directly using reflexivity, but it won't wor
 -/
 
 namespace scratch
-theorem Nat.add_zero_firsttry (n : Nat) : n.add .zero = n := by
+
+#try Nat.add_zero_firsttry (n : Nat) : n.add .zero = n := by
   -- Just applying reflexivity doesn't work here.
   -- The reason is that `n` is an arbitrary unknown number, so Lean can't
   -- directly compute the result of `Nat.add n .zero`. The recursion in the definition
@@ -79,6 +81,7 @@ theorem Nat.add_zero_firsttry (n : Nat) : n.add .zero = n := by
   --
   -- For Lean to simplify `n.add .zero`, it needs to know whether n is .zero or .succ n'
   -- so it can choose the right branch of the match statement.
+  try simp [Nat.add]  -- Without the `try`, Lean will complain that `simp` made no progress.
   sorry
 
 /-!
@@ -86,7 +89,7 @@ We might try to use case analysis with the `cases` tactic, which breaks `n` into
 its possible constructors (.zero and .succ n'). Let's see how far that gets us:
 -/
 
-theorem Nat.add_zero_secondtry (n : Nat) : n.add .zero = n := by
+#try Nat.add_zero_secondtry (n : Nat) : n.add .zero = n := by
   cases n with
   | zero => rfl  -- For n = 0, we have 0 + 0 = 0, which is true by reflection
   | succ n' =>
@@ -111,7 +114,7 @@ If P(n) is some property involving natural numbers, to prove P(n) holds for all 
 In Lean, we apply this principle using the `induction` tactic. Let's see how it works:
 -/
 
-theorem add_zero_r (n : Nat) : n.add .zero = n := by
+theorem Nat.add_zero (n : Nat) : n.add .zero = n := by
   induction n with
   | zero =>
     -- Base case: Prove that 0 + 0 = 0
@@ -226,7 +229,16 @@ theorem Nat.mul_zero (n : Nat) : n.mul .zero = .zero := by
 
   Try to follow the pattern we used in the add_zero_r proof above.
   -/
-  sorry
+  solution[[
+    induction n with
+    | zero =>
+      -- Base case: 0 * 0 = 0
+      rfl
+    | succ n IH =>
+      simp [mul]
+      simp [add]
+      exact IH
+  ]]
 
 
 theorem Nat.add_succ (n m : Nat) : n.add m.succ = (n.add m).succ := by
@@ -239,7 +251,16 @@ theorem Nat.add_succ (n m : Nat) : n.add m.succ = (n.add m).succ := by
   Hint: For the inductive step, you'll need to think about how
   S((S n') + m) relates to (S n') + S(m).
   -/
-  sorry
+  solution[[
+    induction n with
+    | zero =>
+      -- Base case: 0 + S(m) = S(0 + m)
+      rfl
+    | succ n' IH =>
+      -- Inductive step: S(n') + S(m) = S(S(n') + m)
+      simp [add]
+      rw [IH]
+  ]]
 
 
 theorem Nat.add_comm (n m : Nat) : n.add m = m.add n := by
@@ -252,7 +273,19 @@ theorem Nat.add_comm (n m : Nat) : n.add m = m.add n := by
   Hint: Try induction on n. For the inductive step, you'll need to reason about
   how S(n') + m relates to m + S(n').
   -/
-  sorry
+  solution[[
+    induction n with
+    | zero =>
+      -- Base case: 0 + m = m + 0
+      simp [add]
+      symm
+      apply Nat.add_zero
+    | succ n' IH =>
+      -- Inductive step: S(n') + m = m + S(n')
+      simp [add]
+      rw [IH]
+      rw [Nat.add_succ]
+  ]]
 
 
 theorem Nat.add_assoc (n m p : Nat) : (n.add m).add p = n.add (m.add p) := by
@@ -264,7 +297,14 @@ theorem Nat.add_assoc (n m p : Nat) : (n.add m).add p = n.add (m.add p) := by
 
   Hint: Try induction on n and apply the definition of plus.
   -/
-  sorry
+  solution[[
+    induction n with
+    | zero =>
+      simp [add]
+    | succ n' IH =>
+      simp [add]
+      exact IH
+  ]]
 
 /-!
 ### Exercise: 2 stars, standard (double_add)
@@ -286,7 +326,7 @@ For example:
 Now, use induction to prove this simple fact about double:
 -/
 
-theorem Nat.double_plus (n : Nat) : n.double = n.add n := by
+theorem Nat.double_add (n : Nat) : n.double = n.add n := by
   /-
   This theorem states that doubling a number is the same as adding it to itself.
 
@@ -296,7 +336,19 @@ theorem Nat.double_plus (n : Nat) : n.double = n.add n := by
   Hint: Use induction on n. For the inductive step, think about how
   double (S n') relates to (S n') + (S n').
   -/
-  sorry
+  solution[[
+    induction n with
+    | zero =>
+      -- Base case: double 0 = 0 + 0
+      rfl
+    | succ n' IH =>
+      -- Inductive step: double (S n') = S n' + S n'
+      simp [double]
+      simp [add]
+      rw [IH]
+      rewrite [Nat.add_succ]
+      eq_refl
+  ]]
 
 /-!
 ### Exercise: 2 stars, standard (eqb_refl)
@@ -321,7 +373,16 @@ theorem Nat.beq_refl (n : Nat) : n.beq n = .true := by
 
   Hint: Follow the recursive structure of eqb in your proof.
   -/
-  sorry
+  solution[[
+    induction n with
+    | zero =>
+      -- Base case: 0 == 0 is true
+      rfl
+    | succ n' IH =>
+      -- Inductive step: S(n') == S(n') is true if n' == n' is true
+      simp [beq]
+      exact IH
+  ]]
 
 /-!
 ### Exercise: 2 stars, standard, optional (even_S)
@@ -350,7 +411,17 @@ theorem Nat.beven_succ (n : Nat) : n.succ.beven = n.beven.not := by
 
   Hint: Try using cases on n to handle different possibilities.
   -/
-  sorry
+  solution[[
+    induction n with
+    | zero =>
+      -- Base case: even(1) = not even(0)
+      simp [beven, Bool.not]
+    | succ n' IH =>
+      -- Inductive step: even(S(S n')) = not even(S n')
+      simp [beven]
+      rw [IH]
+      rw [Bool.not_not]
+  ]]
 
 /-!
 ## Proofs Within Proofs
@@ -415,7 +486,16 @@ theorem add_shuffle3 (n m p : Nat) : n.add (m.add p) = m.add (n.add p) := by
 
   Hint: Try breaking this down into smaller steps using `have`.
   -/
-  sorry
+  rewrite [<-Nat.add_assoc]
+  have E : n.add m = m.add n := by
+    solution[[
+      rw [Nat.add_comm]
+    ]]
+  solution[[
+    rw [E]
+    rw [Nat.add_assoc]
+  ]]
+
 
 /-!
 Now prove commutativity of multiplication. You will probably want to look for
@@ -434,7 +514,32 @@ theorem Nat.mul_comm (m n : Nat) : m.mul n = n.mul m := by
   Hint: Consider proving a helper lemma about distributivity or about
   multiplying by successor numbers.
   -/
-  sorry
+  have H: forall p k: Nat, p.mul (k.succ) = (p.mul k).add p := by
+    intro p k
+    induction p with
+    | zero =>
+      simp [Nat.mul]
+      simp [Nat.add]
+    | succ p' IH =>
+      simp [Nat.mul]
+      rw [IH]
+      -- Hint: use `add_succ` and `add_assoc`
+      solution[[
+        simp [Nat.add]
+        rw [Nat.add_succ]
+        rw [Nat.add_assoc]
+      ]]
+  solution[[
+    induction m with
+    | zero =>
+      simp [Nat.mul]
+      rw [Nat.mul_zero]
+    | succ m' IH =>
+      simp [Nat.mul]
+      rw [IH]
+      rw [H]
+      apply Nat.add_comm
+  ]]
 
 /-!
 ### Exercise: 2 stars, standard, optional (plus_leb_compat_l)
@@ -463,7 +568,16 @@ theorem Nat.add_ble_compat_l (n m p : Nat) :
   Hint: Try using induction on p and carefully consider how to handle
   the induction hypothesis, which also has an implication.
   -/
-  sorry
+  solution[[
+    induction p with
+    | zero =>
+      simp [Nat.add]
+      exact H
+    | succ p' IH =>
+      simp [Nat.add]
+      simp [Nat.ble]
+      apply IH
+  ]]
 
 /-!
 ### Exercise: 3 stars, standard, optional (more_exercises)
@@ -482,7 +596,15 @@ theorem Nat.ble_refl (n : Nat) : n.ble n = .true := by
 
   Hint: Consider how leb compares equal numbers.
   -/
-  sorry
+  solution[[
+    induction n with
+    | zero =>
+      simp [Nat.ble]
+    | succ n' IH =>
+      simp [Nat.ble]
+      apply IH
+  ]]
+
 
 theorem Nat.zero_not_beq_succ (n : Nat) : Nat.zero.beq n.succ = .false := by
   /-
@@ -492,7 +614,9 @@ theorem Nat.zero_not_beq_succ (n : Nat) : Nat.zero.beq n.succ = .false := by
 
   Hint: Look at the definition of eqb.
   -/
-  sorry
+  solution[[
+    simp [Nat.beq]
+  ]]
 
 theorem Bool.and_false (b : Bool) : b.and .false = .false := by
   /-
@@ -502,7 +626,14 @@ theorem Bool.and_false (b : Bool) : b.and .false = .false := by
 
   Hint: Consider using case analysis on b.
   -/
-  sorry
+  solution[[
+    cases b with
+    | true =>
+      simp [Bool.and]
+    | false =>
+      simp [Bool.and]
+  ]]
+
 
 theorem Nat.succ_not_beq_zero (n : Nat) : n.succ.beq .zero = .false := by
   /-
@@ -512,7 +643,9 @@ theorem Nat.succ_not_beq_zero (n : Nat) : n.succ.beq .zero = .false := by
 
   Hint: Look at the definition of eqb.
   -/
-  sorry
+  solution[[
+    simp [Nat.beq]
+  ]]
 
 theorem Nat.mul_one (n : Nat) : Nat.zero.succ.mul n = n := by
   /-
@@ -522,9 +655,12 @@ theorem Nat.mul_one (n : Nat) : Nat.zero.succ.mul n = n := by
 
   Hint: Consider using the definition of mult and rewriting.
   -/
-  sorry
+  solution[[
+    simp [Nat.mul]
+    apply Nat.add_zero
+  ]]
 
-theorem all3_spec (b c : Bool) :
+theorem Bool.or_spec (b c : Bool) :
   (b.and c).or (b.not.or c.not) = .true
 := by
   /-
@@ -534,7 +670,22 @@ theorem all3_spec (b c : Bool) :
 
   Hint: Case analysis on b and c would be helpful here.
   -/
-  sorry
+  solution[[
+    cases b with
+    | true =>
+      cases c with
+      | true =>
+        simp [Bool.or, Bool.and]
+      | false =>
+        simp [Bool.or, Bool.and, Bool.not]
+    | false =>
+      cases c with
+      | true =>
+        simp [Bool.or, Bool.and, Bool.not]
+      | false =>
+        simp [Bool.or, Bool.and, Bool.not]
+  ]]
+
 
 theorem Nat.right_distrib (n m p : Nat) :
   (n.add m).mul p = (n.mul p).add (m.mul p) := by
@@ -546,9 +697,30 @@ theorem Nat.right_distrib (n m p : Nat) :
 
   Hint: Try induction on n and use the definitions of mult and plus.
   -/
-  sorry
+  solution[[
+    induction n with
+    | zero =>
+      simp [Nat.mul, Nat.add]
+    | succ n' IH =>
+      simp [Nat.mul, Nat.add]
+      rw [IH]
+      rw [Nat.add_assoc]
+  ]]
 
-theorem Mat.mul_assoc (n m p : Nat) :
+
+theorem Nat.left_distrib (n m p : Nat) :
+  n.mul (m.add p) = (n.mul m).add (n.mul p)
+:= by
+  /- This should be obtained from `Nat.right_distrib` -/
+  solution[[
+    rw [Nat.mul_comm]
+    rw [Nat.mul_comm n m]
+    rw [Nat.mul_comm n p]
+    apply Nat.right_distrib
+  ]]
+
+
+theorem Nat.mul_assoc (n m p : Nat) :
   n.mul (m.mul p) = (n.mul m).mul p := by
   /-
   This theorem states that multiplication is associative:
@@ -559,17 +731,20 @@ theorem Mat.mul_assoc (n m p : Nat) :
 
   Hint: Try induction on n and use the distributive property.
   -/
-  sorry
+  solution[[
+    induction n with
+    | zero =>
+      simp [Nat.mul]
+    | succ n' IH =>
+      simp [Nat.mul]
+      rw [IH]
+      rw [Nat.right_distrib]
+  ]]
 
 /-!
 ### Exercise: 2 stars, standard, optional (add_shuffle3')
-The `replace` tactic allows you to specify a particular subterm to rewrite and
-what you want it rewritten to: replace (t) with (u) replaces (all copies of)
-expression t in the goal by expression u, and generates t = u as an additional
-subgoal. This is often useful when a plain rewrite acts on the wrong part of the goal.
-
-Use the `replace` tactic to do a proof of add_shuffle3', just like add_shuffle3
-but without needing `have`.
+We can also use the _transitivity_ of equality to prove `add_shuffle3`, i.e.,
+we can use `calc` to chain together equalities.
 -/
 
 theorem add_shuffle3' (n m p : Nat) : n.add (m.add p) = m.add (n.add p) := by
@@ -579,7 +754,12 @@ theorem add_shuffle3' (n m p : Nat) : n.add (m.add p) = m.add (n.add p) := by
 
   Hint: Think about which sub-expression you want to replace and with what.
   -/
-  sorry
+  calc
+    _ = (n.add m).add p := by rw [Nat.add_assoc]
+    _ = (m.add n).add p := by solution[[
+        rw [Nat.add_comm n m]
+      ]]
+    _ = m.add (n.add p) := by rw [Nat.add_assoc]
 
 /-!
 ## Nat to Bin and Back to Nat
@@ -610,14 +790,16 @@ helps us grasp how computers handle numbers efficiently.
 ### Exercise: 3 stars, standard, especially useful (binary_commute)
 Prove that the following diagram commutes:
 
-                            incr
-              bin ----------------------> bin
-               |                           |
-    bin_to_nat |                           |  bin_to_nat
-               |                           |
-               v                           v
-              nat ----------------------> nat
-                             S
+```
+                  succ
+     Bin ----------------------> Bin
+      |                           |
+toNat |                           |  toNat
+      |                           |
+      v                           v
+     Nat ----------------------> Nat
+                  succ
+```
 
 That is, incrementing a binary number and then converting it to a (unary)
 natural number yields the same result as first converting it to a natural
@@ -628,8 +810,8 @@ and the operations we've defined on them are consistent with each other. It
 confirms that "incrementing" means the same thing in both representations.
 -/
 
-theorem bin_to_nat_pres_incr (b : Bin) :
-  bin_to_nat (incr b) = (bin_to_nat b).succ := by
+theorem Bin.toNat_succ (b : Bin) :
+  b.succ.toNat = b.toNat.succ := by
   /-
   This theorem establishes that the diagram above commutes - incrementing in
   binary and then converting to nat gives the same result as converting to nat
@@ -648,7 +830,21 @@ theorem bin_to_nat_pres_incr (b : Bin) :
    - Use the induction hypothesis when appropriate
    - Simplify to show the two sides are equal
   -/
-  sorry
+  solution[[
+    induction b with
+    | Z =>
+      -- Base case: b = Z
+      simp [Bin.succ, Bin.toNat, Nat.add]
+    | B0 b' IH =>
+      -- Inductive case: b = B0 b'
+      simp [Bin.succ, Bin.toNat]
+    | B1 b' IH =>
+      -- Inductive case: b = B1 b'
+      simp [Bin.succ, Bin.toNat]
+      rw [IH]
+      simp [Nat.add]
+      rw [Nat.add_succ]
+  ]]
 
 /-!
 ### Exercise: 3 stars, standard (nat_bin_nat)
@@ -659,7 +855,7 @@ to binary and back again. When designing this function, think about how binary
 numbers are constructed - each digit position represents a power of 2.
 -/
 
-def nat_to_bin (n : Nat) : Bin :=
+def Bin.ofNat (n : Nat) : Bin :=
   /-
   To convert a natural number to binary, we need a systematic approach.
 
@@ -674,13 +870,37 @@ def nat_to_bin (n : Nat) : Bin :=
      - Start with Z (binary 0)
      - For each number from 1 to n, increment the binary representation
 
-  The iterative approach aligns well with our incr function, but might be less efficient.
+  The iterative approach aligns well with our `inc` function, but might be less efficient.
   The recursive approach is more efficient but requires handling odd/even cases.
 
   Hint: For a recursive solution, consider using a helper function that handles
   division by 2 and checking for odd/even.
   -/
-  sorry
+  solution[[
+    match n with
+    | .zero => Z
+    | .succ n' => (Bin.ofNat n').succ
+  ]]
+
+/-!
+We similarly have `ofNat_succ`.
+```
+                  succ
+     Nat ----------------------> Nat
+      |                           |
+ofNat |                           |  ofNat
+      |                           |
+      v                           v
+     Bin ----------------------> Bin
+                  succ
+```
+-/
+theorem Bin.ofNat_succ (n : Nat) : Bin.ofNat n.succ = (Bin.ofNat n).succ
+:= by
+  solution[[
+    simp [Bin.ofNat]
+  ]]
+
 
 /-!
 Prove that, if we start with any nat, convert it to bin, and convert it back,
@@ -691,24 +911,33 @@ functions preserve the value of the number, which is crucial for using binary
 representation reliably.
 -/
 
-theorem nat_bin_nat (n : Nat) : bin_to_nat (nat_to_bin n) = n := by
-  /-
-  This theorem establishes that converting from nat to bin and back to nat
-  preserves the original number.
+/--
+This theorem establishes that converting from nat to bin and back to nat
+preserves the original number.
 
-  The approach here is to use induction on n:
+The approach here is to use induction on n:
 
-  1. Base case: Show that bin_to_nat (nat_to_bin 0) = 0
-  2. Inductive step: Assume bin_to_nat (nat_to_bin n') = n'
-     and prove bin_to_nat (nat_to_bin (succ n')) = succ n'
+1. Base case: Show that bin_to_nat (nat_to_bin 0) = 0
+2. Inductive step: Assume bin_to_nat (nat_to_bin n') = n'
+    and prove bin_to_nat (nat_to_bin (succ n')) = succ n'
 
-  The inductive step might require using the previous theorem about
-  bin_to_nat and incr, depending on how nat_to_bin is implemented.
+The inductive step might require using the previous theorem about
+bin_to_nat and incr, depending on how nat_to_bin is implemented.
 
-  A key insight: If nat_to_bin (succ n) = incr (nat_to_bin n),
-  then we can leverage bin_to_nat_pres_incr.
-  -/
-  sorry
+A key insight: If nat_to_bin (succ n) = incr (nat_to_bin n),
+then we can leverage bin_to_nat_pres_incr.
+-/
+theorem Bin.nat_bin_nat (n : Nat) : Bin.toNat (Bin.ofNat n) = n := by
+  solution[[
+    induction n with
+    | zero =>
+      simp [Bin.ofNat, Bin.toNat]
+    | succ n' IH =>
+      simp [Bin.ofNat]
+      rw [Bin.toNat_succ]
+      rw [IH]
+  ]]
+
 
 /-!
 ## Bin to Nat and Back to Bin (Advanced)
@@ -739,23 +968,26 @@ This lemma establishes a property about the double function that will be useful
 for our normalization approach.
 -/
 
-theorem double_incr (n : Nat) : n.succ.double = n.double.succ.succ := by
+theorem Nat.double_succ (n : Nat) : n.succ.double = n.double.succ.succ := by
   /-
   This theorem relates doubling the successor of n to adding 2 to the double of n.
 
   Let's recall the definition of double:
-  def double (n : MyNat) : MyNat :=
+  ```lean
+  def Nat.double (n : Nat) : Nat :=
     match n with
     | .zero => .zero
     | .succ n' => .succ (.succ (double n'))
-
+  ```
   For the successor case, we need to show:
   double (succ n) = succ (succ (double n))
 
   This can be done directly from the definition of double, followed by
   straightforward rewriting steps.
   -/
-  sorry
+  solution[[
+    simp [Nat.double]
+  ]]
 
 /-!
 Now define a similar doubling function for bin.
@@ -765,7 +997,7 @@ The relationship between doubling and binary representation should be
 straightforward: doubling a binary number is equivalent to appending a 0 bit.
 -/
 
-def double_bin (b : Bin) : Bin :=
+def Bin.double (b : Bin) : Bin :=
   /-
   Implement a function that doubles a binary number.
 
@@ -779,53 +1011,127 @@ def double_bin (b : Bin) : Bin :=
 
   Hint: The simplest implementation is just to append a 0 bit (use B0).
   -/
-  sorry
+  solution[[
+    match b with
+    | .Z => .Z
+    | _ => .B0 b
+  ]]
 
 /-!
 Check that your function correctly doubles zero.
 -/
 
-theorem double_bin_zero : double_bin .Z = .Z := by
+theorem Bin.double_zero : Bin.double .Z = .Z := by
   /-
   Verify that doubling zero gives zero.
 
   This should follow directly from your definition of double_bin,
   as doubling zero should still be zero.
   -/
-  sorry
+  solution[[
+    simp [Bin.double]
+  ]]
 
 /-!
-Prove this lemma, which corresponds to double_incr.
+Prove this lemma, which corresponds to double_succ.
 
 This lemma establishes an important property about the relationship between
 doubling and incrementing in binary representation.
 -/
 
-theorem double_incr_bin (b : Bin) :
-  double_bin (incr b) = incr (incr (double_bin b)) := by
-  /-
-  This theorem for Bin corresponds to the double_incr theorem for MyNat.
-  It states that doubling the increment of b is the same as
-  incrementing twice the double of b.
+/--
+This theorem for Bin corresponds to the double_succ theorem for Nat.
+It states that doubling the increment of b is the same as
+incrementing twice the double of b.
 
-  In mathematical terms: 2 × (b + 1) = (2 × b) + 2
+In mathematical terms: 2 × (b + 1) = (2 × b) + 2
 
-  The proof will require induction on b, with separate cases for Z, B0(b'), and B1(b').
-  For each case, we'll need to:
-   - Apply the definitions of double_bin and incr
-   - Use the induction hypothesis when appropriate
-   - Simplify to show the two sides are equal
+The proof will require induction on b, with separate cases for Z, B0(b'), and B1(b').
+For each case, we'll need to:
+  - Apply the definitions of `Bin.double` and `Bin.succ`
+  - Use the induction hypothesis when appropriate
+  - Simplify to show the two sides are equal
 
-  This can be tricky because incrementing a binary number can require carrying
-  operations that propagate through multiple bits.
-  -/
-  sorry
+This can be tricky because incrementing a binary number can require carrying
+operations that propagate through multiple bits.
+-/
+theorem Bin.double_succ (b : Bin) :
+  b.succ.double = b.double.succ.succ
+:= by
+  solution[[
+    cases b with
+    | Z =>
+      -- Base case: b = Z
+      simp [Bin.double, Bin.succ]
+    | B0 b' =>
+      -- Inductive case: b = B0 b'
+      simp [Bin.double, Bin.succ]
+    | B1 b' =>
+      -- Inductive case: b = B1 b'
+      simp [Bin.double, Bin.succ]
+  ]]
+
+
+/--
+If you take the successor of the double of a binary number, it is the same as
+adding `B1` to the original binary number.
+-/
+theorem Bin.succ_double (b : Bin) :
+  b.double.succ = b.B1
+:= by
+  solution[[
+    cases b with
+    | Z =>
+      -- Base case: b = Z
+      simp [Bin.double, Bin.succ]
+    | B0 b' =>
+      -- Inductive case: b = B0 b'
+      simp [Bin.double, Bin.succ]
+    | B1 b' =>
+      -- Inductive case: b = B1 b'
+      simp [Bin.double, Bin.succ]
+  ]]
+
+
+/--
+This theorem states that converting the double of a natural number to binary
+is the same as doubling the binary representation of that natural number.
+
+The proof will require induction on n, with separate cases for 0 and succ(n').
+For each case, we'll need to:
+  - Apply the definitions of ofNat and double
+  - Use the induction hypothesis when appropriate
+  - Simplify to show the two sides are equal
+
+This establishes a key relationship between the unary and binary representations
+of numbers, particularly in how they handle doubling.
+-/
+theorem Bin.ofNat_double (n : Nat) : Bin.ofNat n.double = (Bin.ofNat n).double := by
+  induction n with
+  | zero =>
+    -- Base case: n = 0
+    solution[[
+      simp [Bin.ofNat, Bin.double, Nat.double]
+    ]]
+  | succ n' IH =>
+    -- Inductive case: n = succ(n')
+    -- We use `Bin.ofNat_succ` and `Bin.double_succ` to change the goal,
+    -- so that we can apply the induction hypothesis.
+    rw [Bin.ofNat_succ]
+    rw [Bin.double_succ]
+    solution[[
+      rw [<-IH]
+      rw [<-Bin.ofNat_succ]
+      rw [<-Bin.ofNat_succ]
+      rw [Nat.double_succ]
+    ]]
+
 
 /-!
 ### Exercise: 4 stars, advanced (bin_nat_bin)
 Define normalize. You will need to keep its definition as simple as possible
-for later proofs to go smoothly. Do not use bin_to_nat or nat_to_bin, but do
-use double_bin.
+for later proofs to go smoothly. Do not use `Bin.toNat` or `Bin.ofNat`, but do
+use `Bin.double`.
 
 The normalize function converts any binary number to a canonical form,
 ensuring that each natural number has a unique binary representation.
@@ -834,7 +1140,7 @@ Hint: Structure the recursion such that it always reaches the end of the bin
 and process each bit only once. Do not try to "look ahead" at future bits.
 -/
 
-def normalize (b : Bin) : Bin :=
+def Bin.normalize (b : Bin) : Bin :=
   /-
   Implement a function that converts a binary number to its canonical form.
 
@@ -856,21 +1162,26 @@ def normalize (b : Bin) : Bin :=
   Hint: For B0 b', consider whether b' normalizes to Z, as this is a special case
   (we don't want B0 Z, which would be a leading zero).
   -/
-  sorry
+  solution[[
+    match b with
+    | .Z => .Z
+    | .B0 b' => b'.normalize.double
+    | .B1 b' => b'.normalize.B1
+  ]]
 
 /-!
 Finally, prove the main theorem. The inductive cases could be a bit tricky.
 
-This theorem establishes that the round-trip conversion from bin to nat and
+This theorem establishes that the round-trip conversion from `Bin` to `Nat` and
 back creates the normalized form of the original binary number.
 
 Hint: Start by trying to prove the main statement, see where you get stuck,
 and see if you can find a lemma -- perhaps requiring its own inductive proof --
 that will allow the main proof to make progress. We have one lemma for the B0
-case (which also makes use of double_incr_bin) and another for the B1 case.
+case (which also makes use of double_succ) and another for the B1 case.
 -/
 
-theorem bin_nat_bin (b : Bin) : nat_to_bin (bin_to_nat b) = normalize b := by
+theorem Bin.bin_nat_bin (b : Bin) : Bin.ofNat (Bin.toNat b) = Bin.normalize b := by
   /-
   This theorem establishes that converting from bin to nat and back to bin
   gives the normalized version of the original binary number.
@@ -878,20 +1189,57 @@ theorem bin_nat_bin (b : Bin) : nat_to_bin (bin_to_nat b) = normalize b := by
   The approach is to use induction on b, with cases for Z, B0 b', and B1 b'.
 
   For each case:
-  1. Apply definitions of bin_to_nat, nat_to_bin, and normalize
+  1. Apply definitions of ofNat, toNat, and normalize
   2. Use the induction hypothesis when appropriate
-  3. Apply lemmas about double_bin and other properties
+  3. Apply lemmas about Bin.double and other properties
   4. Simplify to show the two sides are equal
 
   This is quite a challenging proof and may require developing additional
   helper lemmas along the way. For example:
 
-  - A lemma relating nat_to_bin and double_bin
-  - A lemma about the relationship between normalize and double_bin
+  - A lemma relating `toNat` and `double`
+  - A lemma about the relationship between `normalize` and `double`
 
   Breaking down the proof into smaller steps and proving these relationships
   individually will make the main theorem more manageable.
   -/
-  sorry
+  induction b with
+  | Z =>
+    -- Base case: b = Z
+    solution[[
+      simp [Bin.toNat, Bin.ofNat, Bin.normalize]
+    ]]
+  | B0 b' IH =>
+    -- Inductive case: b = B0 b'
+    have normalize_double: forall n: Bin, n.normalize.double = n.normalize.double := by
+      clear IH  -- We don't want it here.
+      intro n
+      -- Hint: do case analysis on n and use the definition of normalize and double.
+      solution[[
+        cases n with
+        | Z =>
+          simp [Bin.normalize, Bin.double]
+        | B0 n' =>
+          simp [Bin.normalize, Bin.double]
+        | B1 n' =>
+          simp [Bin.normalize, Bin.double]
+      ]]
+    solution[[
+      simp [Bin.toNat, Bin.normalize]
+      rw [<-Nat.double_add]
+      rw [Bin.ofNat_double]
+      rw [<-normalize_double]
+      rw [<-IH]
+    ]]
+  | B1 b' IH =>
+    -- Inductive case: b = B1 b'
+    -- `simp` and `rewrite` until we can apply the induction hypothesis
+    solution[[
+      simp [Bin.toNat, Bin.normalize, Bin.ofNat]
+      rw [<-Nat.double_add]
+      rw [Bin.ofNat_double]
+      rw [IH]
+      rw [Bin.succ_double]
+    ]]
 
 end scratch

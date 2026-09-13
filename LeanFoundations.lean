@@ -6,7 +6,7 @@ Authors: Xiao Tan
 -/
 
 import LeanFoundations.Logic
-import LeanFoundations.PL
+-- import LeanFoundations.PL
 
 
 /-!

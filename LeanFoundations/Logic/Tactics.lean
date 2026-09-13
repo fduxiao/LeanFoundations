@@ -4,6 +4,8 @@ Released under MIT license as described in the file LICENSE.
 Authors: Xiao Tan
 -/
 
+import LeanFoundations._MyTactics
+
 /-!
 # More Basic Tactics
 We are going to lean more tactics in this chapter. We first inspect more on the *implications*.
@@ -467,13 +469,19 @@ example (A B C: Prop): (A -> B ∧ C) -> (A -> B) ∧ (A -> C) := by
 -/
 
 example (A B C: Prop): (A -> B) ∧ (A -> C) -> (A -> B ∧ C) := by
-  admit
+  solution[[
+    grind
+  ]]
 
 example (A B C: Prop): (A -> B -> C) -> (A ∧ B -> C) := by
-  admit
+  solution[[
+    grind
+  ]]
 
 example (A B C: Prop): (A ∧ B -> C) -> (A -> B -> C) := by
-  admit
+  solution[[
+    grind
+  ]]
 
 
 /-!
@@ -1182,9 +1190,9 @@ example (n: Nat) (f: Nat -> Bool) (b: Bool): f n = b.not -> (f n).not = b := by
   unfold not
   cases (f n) with
   | true =>
-    admit
+    sorry
   | false =>
-    admit
+    sorry
 ```
 
 In this proof, after we `unfold not`, we have to do a pattern match for `f n`. This suggests
@@ -1375,7 +1383,7 @@ example (l: List Nat): (sum_list l) = sum_list_tr l 0 := by
     simp [sum_list, sum_list_tr]
   | cons x xs IH =>
     simp [sum_list, sum_list_tr]
-    admit
+    sorry
 ```
 In the case `cons`, the inductive hypothesis has type `IH: sum_list xs = sum_list_tr xs 0`,
 while the target is `x + sum_list xs = sum_list_tr xs x`. This time we cannot trigger the

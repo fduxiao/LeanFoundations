@@ -8,6 +8,7 @@ Software Foundations (Logical Foundations).
 -/
 
 import LeanFoundations.Logic.IndPrinciples
+import LeanFoundations._MyTactics
 
 /-!
 # Relations
@@ -250,7 +251,31 @@ theorem le_not_symmetric_rel : ¬ Symmetric le := by
 -/
 
 instance le_antisymmetric : Antisymmetric le where
-  asymm := sorry
+  asymm := by
+    intro x y Hxy Hyx
+    induction x generalizing y
+    case zero =>
+      cases Hyx
+      rfl
+    case succ x' IH =>
+      have H: y ≠ 0 := by
+        cases y
+        case zero =>
+          cases Hxy
+        simp
+      -- with H, we have the following
+      have E: y = y - 1 + 1 := by omega
+      rw [E]
+      rw [E] at Hxy Hyx
+      apply Nat.add_one_inj.mpr
+      -- Now we have apply inductive hypothesis
+      solution[[
+        apply IH
+        . apply le.add_one
+          exact Hxy
+        . apply le.add_one
+          exact Hyx
+      ]]
 
 /-!
 ### Equivalence Relations
@@ -498,9 +523,10 @@ class ClosureOp {X: Type} (Pred: outParam (RelationPred X)) (Cl: (RelationOp X))
 We also define the related syntactic sugar and instances.
 -/
 
-def RelationOp.close {X: Type}
+instance RelationOp.close {X: Type}
   (Cl: RelationOp X) (R: Relation X) {Pred: RelationPred X}
   [inst: ClosureOp Pred Cl]
+: Closure Pred R (Cl R)
 := inst.close R
 
 
@@ -726,7 +752,17 @@ instance ECl.from_RTCl {X: Type} (R: Relation X):
   RTCl R sub_rel ECl R
 where
   inclusion := by
-    admit
+    solution[[
+      intro x y H
+      induction H
+      case refl =>
+        apply ECl.refl
+      case step x y z Hxy Hyz IH =>
+        apply ECl.trans
+        . apply ECl.inclusion
+          apply Hxy
+        . apply IH
+    ]]
 
 /-!
 ## Church-Rosser Theorem
@@ -1051,7 +1087,12 @@ theorem Relation.MNormal.Normal {X: Type} {R: Relation X} [Irreflexive R]:
   intro n HMR Hx
   let ⟨x, Hx⟩ := Hx
   have E: n = x := by
-    sorry
+    solution[[
+      apply HMR
+      apply RTCl.step
+      . exact Hx
+      . apply RTCl.refl
+    ]]
   rewrite [E] at Hx
   apply R.irrefl Hx
 
@@ -1193,9 +1234,15 @@ theorem Relation.ChRo_to_semi_confl {X: Type} (R: Relation X)
     intro m1 m2 m3 H12 H13
     apply inst.church_rosser
     apply Relation.trans (y := m1)
-    . sorry
+    . solution[[
+        apply ECl.symm
+        apply ECl.inclusion
+        exact H12
+      ]]
     . apply Relation.super (R := (RTCl R))
-      sorry
+      solution[[
+        exact H13
+      ]]
 
 /-!
 ### Prove Semi-Confluency

@@ -88,8 +88,22 @@ applying the induction principle, it also:
 For example, here's a proof of associativity using `apply Nat.rec`:
 -/
 
-theorem plus_assoc_rec : ∀ n m p : Nat, n + (m + p) = (n + m) + p := by
-  sorry
+theorem add_assoc_rec : ∀ n m p : Nat, n + (m + p) = (n + m) + p := by
+  apply Nat.rec
+  . -- base case: n = 0
+    intro m p
+    rewrite [Nat.zero_add]
+    rewrite [Nat.zero_add]
+    eq_refl
+  . -- inductive step: assume n + (m + p) = (n + m) + p, prove (n + 1) + (m + p) = ((n + 1) + m) + p
+    intro n IH m p
+    solution[[
+      rewrite [Nat.succ_add]
+      rewrite [IH]
+      rewrite [Nat.succ_add]
+      rewrite [Nat.succ_add]
+      eq_refl
+    ]]
 
 /-!
 ## Induction Principles in `Prop`
@@ -119,13 +133,24 @@ This leads to a different induction hypothesis: instead of "assuming `P(n)` and 
 To prove theorems by induction on evidence, we can use either the `induction` tactic (which
 will invoke `ev.rec` under the hood) or apply `ev.rec` directly.
 
-### Exercise: 2 stars, standard (ev_ev_plus_4)
+### Exercise: 2 stars, standard (ev_ev_add_4)
 
 As an example, here's the proof that `ev n → ev (n + 4)` for any `n`:
 -/
 
-theorem ev_ev_plus_4 : ∀ n, Even n → Even (n + 4) := by
-  sorry
+theorem ev_ev_add_4 : ∀ n, Even n → Even (n + 4) := by
+  intro n
+  apply Even.rec
+  · -- base case: n = 0
+    apply Even.succ2
+    apply Even.succ2
+    apply Even.zero
+  . -- inductive step: assume n is even and ev n → ev (n + 4)
+    intro n' E IH
+    solution[[
+      apply Even.succ2
+      exact IH
+    ]]
 
 /-!
 ## More on Induction over Evidence
@@ -154,7 +179,16 @@ Prove the following theorem:
 -/
 
 theorem ev_minus2_n : ∀ n, Even n → ∃ k, n = k + k := by
-  sorry
+  solution[[
+    intro n E
+    induction E
+    case zero =>
+      exists 0
+    case succ2 n' E' IH =>
+      rcases IH with ⟨k, E⟩
+      exists (k + 1)
+      omega
+  ]]
 
 /-!
 ## Induction Principles for Other Datatypes
@@ -175,8 +209,20 @@ Prove the following theorem using `apply List.rec` instead of `induction`:
 -/
 
 theorem app_assoc : ∀ (X : Type) (l1 l2 l3 : List X),
-  l1 ++ (l2 ++ l3) = (l1 ++ l2) ++ l3 := by
-  sorry
+  l1 ++ (l2 ++ l3) = (l1 ++ l2) ++ l3
+:= by
+  intro X
+  apply List.rec
+  . -- base case: l1 = []
+    intro l2 l3
+    rewrite [List.nil_append]
+    rewrite [List.nil_append]
+    eq_refl
+  . -- inductive step: assume l1 = x :: xs, and the theorem holds for xs
+    intro x xs IH l2 l3
+    solution[[
+      simp_all
+    ]]
 
 /-!
 ### Exercise: 2 stars, standard, optional (tree_induction)
@@ -338,7 +384,16 @@ Prove that `2 * n` is even for all `n`:
 -/
 
 theorem double_even : ∀ n, Even (2 * n) := by
-  sorry
+  solution[[
+    intro n
+    induction n
+    case zero =>
+      apply Even.zero
+    case succ n' IH =>
+      rw [Nat.mul_succ]
+      apply Even.succ2
+      exact IH
+  ]]
 
 /-!
 ### Exercise: 3 stars, standard (induction_principles_exercises)
@@ -348,7 +403,17 @@ Try to prove the following theorems using induction on evidence:
 
 -- Exercise: Prove that if n is even, then n can be written as 2*k for some k
 theorem ev_double_n : ∀ n, Even n → ∃ k, n = 2 * k := by
-  sorry
+  solution[[
+    intro n E
+    induction E with
+    | zero =>
+      exists 0
+    | succ2 n' E' IH =>
+      rcases IH with ⟨k, E⟩
+      exists (k + 1)
+      rw [Nat.mul_succ]
+      rw [E]
+  ]]
 
 /-!
 ## Additional Exercises
@@ -391,5 +456,30 @@ Sometimes we need a stronger form of induction. Research and implement strong in
 theorem strong_induction :
   ∀ (P : Nat → Prop),
     (∀ n, (∀ k, k < n → P k) → P n) →
-    ∀ n, P n := by
-  sorry
+    ∀ n, P n
+:= by
+  intro P H n
+  -- We have to find a correct inductive invariant.
+  -- Tactic `suffices` is used to change the goal.
+  suffices K: ∀ m, m ≤ n → P m by
+    apply K
+    simp
+  induction n
+  case zero =>
+    simp
+    apply H
+    simp
+  case succ n IH =>
+    intro m _
+    -- we have to cases for m ≤ n + 1
+    have E: m ≤ n ∨ m = n + 1 := by omega
+    -- we are then able to trigger the induction hypothesis for m ≤ n and the assumption for m = n + 1
+    solution[[
+      cases E
+      . apply IH
+        assumption
+      . apply H
+        intro K _
+        apply IH
+        omega
+    ]]

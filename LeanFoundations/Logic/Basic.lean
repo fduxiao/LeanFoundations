@@ -34,15 +34,24 @@ Another variant of comment is `--` followed by a `newline`. For example
 
 The core of modern computer proof assistants is [type theory][sorensen2006lectures]
 (λ-calculus), i.e. functional programming. This chapter is intended to introduce
-some basics about functional programming in Lean. In (dependent) type
-theory, we give a lot of **rules** to determine valid judgements `term: type`.
-Functions are just a special rule to form a certain type, and proofs are
-just the judgement `proof: proposition`, as is the Curry-Howard
-correspondence. This chapter will show you (some of) those rules, and you
-will learn more of them gradually later in the following chapters.
-You will find that programming languages based on type theory have only a
-few core features (axioms in meta language). All you need for logic can be
-built from scratch within these features.
+some basics about functional programming in Lean.
+
+As in (dependent) type theory, each Lean file consists of several **judgements** of the form
+`term: type`. We encode mathematical objects such as sets or functions as types and terms, and
+infer about them. This is a bit like set theory, where we encode mathematical objects as sets
+and determine whether an element is in a set or not.
+
+You may want to think of `term: type` as `term ∈ type` in set theory. For some simple mathematical objects,
+this is an intuitive analogy. However, type theory is a bit different in that the propositions are also
+encoded as types. Before we have set theory, we have to set up a (first-order) logic system to reason
+about sets. In type theory, we put mathematical objects and propositions (proofs)
+in the same judgement derivation system.
+
+We are going to learn how to encode mathematical objects and propositions in Lean, and
+how to derive new judgements from existing ones. You may expect to have two different derivation
+rules for mathematical objects and propositions, but in fact, they are the same. This means that
+we only have to know a few core rules and we can derive both mathematical objects and propositions from
+them. This is known as the Curry-Howard correspondence.
 -/
 
 /-!
@@ -473,17 +482,14 @@ end scratch
 /-!
 Now, let's have our first theorem, i.e., some proposition we can prove.
 Usually, propositions begin with the keyword `theorem` and are proved
-by the *tactics* after keyword `by`.
+by the *tactics* after keyword `by`. Just like an inductive type or function
+definition, this also means a new judgement is added. For example, the following
+means that we have a judgement `not_false_is_true: Bool.not .false = .true`.
 
-> The reader may be familiar with Curry-Howard correspondence or other proof
-> assistants, and thus expect to prove a theorem with `def` and `:=`
-> directly. Certainly, this is accepted in Lean. For beginners, I suggest
-> tactics because it is easier to read/write them.
-
-If you are using VSCode, the `by` will activate our _goal_ in the `InfoView`
-of Lean. Interactively, after we type some tactic, the goal will then be
-changed. We repeat this process until the goal can be solved by some tactic.
-You can set your cursor at certain tactic to check the goal after it.
+> If you are using VSCode, the `by` will activate our _goal_ in the `InfoView`
+> of Lean. Interactively, after we type some tactic, the goal will then be
+> changed. We repeat this process until the goal can be solved by some tactic.
+> You can set your cursor at certain tactic to check the goal after it.
 -/
 
 namespace scratch
@@ -493,6 +499,12 @@ theorem not_false_is_true : Bool.not .false = .true := by -- To use tactics, we 
   -- There's no further gaols. We have proved that.
 
 /-!
+
+> The reader may be familiar with Curry-Howard correspondence or other proof
+> assistants, and thus expect to prove a theorem with `def` and `:=`
+> directly. Certainly, this is accepted in Lean. For beginners, I suggest
+> tactics because it is easier to read/write them.
+
 The proof here says that
   1. we first compute the `negb` function, which turns the goal to `true = true`;
   2. then, we use the _reflexivity_ of equality to finish the proof.
@@ -510,9 +522,13 @@ example: (Bool.or .true .false) = .true := by
   compute [Bool.or]
   eq_refl
 
+/-!
+> You can use `rfl` as an abbreviation of `eq_refl`. The difference between
+> them is not important for now.
+-/
 example: (Bool.and .false .true) = .false := by
   compute [Bool.and]
-  eq_refl
+  rfl
 
 
 /-!
@@ -747,7 +763,7 @@ def Nat.add (m n: Nat): Nat :=
 def Nat.mul (m n: Nat): Nat :=
   match m with
   | .zero => .zero
-  | .succ m' => m'.add (m'.mul n)  -- (1 + m) * n = m + m * n
+  | .succ m' => n.add (m'.mul n)  -- (1 + m) * n = n + m * n
 
 
 /-- (Truncated) Substraction -/
@@ -796,7 +812,7 @@ The factorial function is defined with the following recursive rules:
 def Nat.factorial: Nat -> Nat := solution[[
   λ n =>
     match n with
-    | .zero => .zero
+    | .zero => Nat.zero.succ  -- 1
     | .succ n' => n'.add (n'.mul n)
 ]]
 
@@ -810,22 +826,38 @@ Now, we have known some basic data type and functions on them, and have
 seen some kind of facts (theorem + proof) about them. We are going to
 introduce more proof techniques. Up to now, we only have the intuitive
 equality predicate `=` and the only way to prove it is through the
-reflexivity. Generally speaking, we prove it by first simplifying all
-computable expression, then concluding with `eq_refl`.
+reflexivity:
+- we first simplify all computable expressions;
+- then conclude with `eq_refl`.
 
-### Universal Quantifiers
 This alone is not powerful enough for us to prove more things. For example,
-we know `false and false is false` and `false and true is false`, i.e.,
-forall `b: Bool`, we shall have `false and b is false`. In Lean, we use
+we know _`false` and `false` is `false`_ and _`false` and `true` is `false`_,
+i.e., forall `b: Bool`, we shall have `false and b is false`. In Lean, we use
 keyword `forall` or `∀` (\forall) for universal Quantifiers:
 ```lean
 forall (b: Bool), Bool.and .false b = .false
 ```
+
+### Universal Quantifiers
+
 But, how can we prove a theorem (proposition) with universal quantifiers?
 We introduce a new technique called `intro`, which will bring the _premises_
-into current _context_. Generally speaking, a _context_ is a list of facts
-you know, with each entry in the list given a name. To understand that, we
-have to look at Lean's structure of a definition. In Lean, after each `def`
+into current _context_. In fact, the **judgements** are of the form `Γ ⊢ t: τ`,
+where `Γ` is the context, `t` is a term, and `τ` is a type. In Lean, all `def`s, `theorem`s,
+`inductive`s must be judgements underder _empty_ context, so we have not been aware of
+contexts so far.
+
+A context `Γ` is a list of `x: σ` where `x` is a name (a variable, not a term) and `σ` is some type.
+You can consider it as `what we have already known`. Each derivation rule tells us how to manipulate `Γ`,
+`t` and `τ` in order to get a new judgement. For example, the `λ-abstraction` of function type is the
+following derivation rule:
+```
+Γ, x: σ ⊢ t: τ
+-----------------------------
+Γ ⊢ λ x. t: σ → τ
+```
+
+To understand that, we look at Lean's structure of a definition. In Lean, after each `def`
 or `theorem`, you specify some name for the thing you want to define/prove
 with a desired type (proposition). This type is then called the _goal_ in
 the interactive infomation view.
@@ -845,9 +877,12 @@ we first bring the premise, i.e., the first $\mathbb{R}$, into the context
 by giving it a name $x: \mathbb{R}$, turning the goal into $\mathbb{R}$,
 and then find a term $x^2: \mathbb{R}$ to fulfill the goal under this
 context. Hence, by making the abstraction, we can conclude a term
-$\lambda x. x^2:\mathbb{R} -> \mathbb{R}$. In Lean, we only have to use the
-`intro` tactic to bring in premises, indicating that we want to show an
-equivalent way to define.
+$\lambda x. x^2:\mathbb{R} \to \mathbb{R}$.
+
+Similarly, proving a theorem `forall (x: Bool), P x` is equivalent
+to prove `P x` under the context `x: Bool`. This is done via the `intro`
+tactic, and we can notice that the tactics are used to manipulate the context or the goal
+to help us build a complicated proof.
 -/
 
 theorem Bool.false_and: forall (b: Bool), Bool.and .false b = .false := by
@@ -861,7 +896,7 @@ theorem Bool.false_and: forall (b: Bool), Bool.and .false b = .false := by
 Here's another example.
 -/
 
-theorem Nat.add_zero: forall (n: Nat), Nat.add .zero n = n := by
+theorem Nat.zero_add: forall (n: Nat), Nat.add .zero n = n := by
   intro n
   compute [Nat.add]
   eq_refl
@@ -1017,7 +1052,7 @@ that `m n: Nat` and `H1: m.beven = true`, `H2: n.beven = true`.
 > `H` means _hypothesis_, which is the conventional variable name for
 > propositions in a context.
 
-However, in Lean, we cannot write a _context_ directly. Just like universal
+However, in Lean, we do not write a _context_ directly. Just like universal
 quantifiers, we prefix the goal with premises by `->` or `→` (\to):
 ```lean
 example: forall m n: Nat,
@@ -1030,14 +1065,63 @@ example: forall m n: Nat,
 To prove such a theorem, we still use the `intro` tactic to turn the goal
 into the equivalent _context-wise_ form. After that, we can make use of
 such a variable in the context. We then give a simple case that when the
-goal is in the context, we can fulfill it by the `exact` tactic. We will
-learn some more complication usage (`apply`) in the future chapters.
+goal is in the context, we can fulfill it by the `exact` tactic.
 -/
 
 theorem imp_example: forall n: Nat, n = n -> n = n := by
   intro n
   intro H
   exact H
+
+
+/-!
+You can also use the following syntactic sugar to write the same theorem.
+This is equivalent to _stipulating the context_.
+-/
+theorem imp_example' (n: Nat): n = n -> n = n := by
+  intro H
+  exact H
+
+/-!
+You can see that Lean consider that they have the same type.
+-/
+
+#check imp_example
+#check imp_example'
+
+/-!
+> Lean always prefers a concise representation of types, so `imp_example` is represented
+> as `imp_example (n: Nat): n = n -> n = n`, which is exactly the same as `imp_example'`.
+-/
+
+/-!
+To make use of an implication, we use the `apply` tactic. It will try to unify
+the goal with the conclusion of the implication. When it succeeds, it will turn
+the premises into new goals. For example,
+-/
+example: Nat.zero = Nat.zero -> Nat.zero = Nat.zero := by
+  intro H
+  apply imp_example
+  exact H
+
+
+/-!
+The `apply` tactic can also unify an implication with the goal directly. In the following case,
+we don't have to introduce the premise into the context.
+-/
+example: Nat.zero = Nat.zero -> Nat.zero = Nat.zero := by
+  apply imp_example
+
+
+/-!
+### Clear unnecessary hypotheses
+When you have a hypothesis in the context, but you don't need it anymore,
+you can use the `clear` tactic to remove it from the context. For example,
+-/
+example: Nat.zero = Nat.zero -> Nat.zero = Nat.zero := by
+  intro H
+  clear H  -- Now, `H` is removed from the context.
+  eq_refl
 
 
 /-!
@@ -1060,15 +1144,15 @@ of `E`. Since equalities are symmetric, we can certainly use the other
 direction by typing a `<-` or `←` (\<-) to specifiy.
 
 > You can use `rw` as an abbreviation of `rewrite`, while it will also
-> try some cheap tactics to close the goal.
+> try some cheap tactics such as `rfl` to close the goal.
 -/
 
 example: forall m n: Nat, m = n -> m.add m = n.add n := by
   intro m n  -- Intro m n as usual.
   intro E  -- For implication.
   -- Our goal is `m.add m = n.add n`.
-  rewrite [<-E]  -- This turns it into `m.add m = m.add m`.
-  eq_refl  -- Finally, reflexivity.
+  rw [<-E]  -- This turns it into `m.add m = m.add m` and `rfl` is tried.
+  -- We don't have to type `eq_refl` here, since `rw` succeeded.
 
 
 /-!
@@ -1116,6 +1200,30 @@ example: 3 = 4 -> 4 = 3 := by
   symm at H  -- This changes 3 = 4 to 4 = 3
   exact H
 
+/-!
+### Transitivity
+We also have the transitivity of equality.
+-/
+
+example: forall m n p: Nat, m = n -> n = p -> m = p := by
+  intro m n p H1 H2
+  rewrite [H1]
+  rewrite [H2]
+  eq_refl
+
+/-!
+One useful fact of transitivity is that you can chain equalities together, i.e.,
+you can prove the equality by steps of _calculations_.
+-/
+
+example: forall m n p q: Nat, m = n -> n = p -> p = q -> m = q := by
+  intro m n p q Hmn Hnp Hpq
+  calc
+    m = n := Hmn
+    n = p := by exact Hnp -- or you can use tactics
+    _ = q := by exact Hpq -- you can omit the `p` here by a `_` placeholder
+
+
 end scratch
 
 /-!
@@ -1130,25 +1238,6 @@ end scratch
 > ```
 -/
 
-namespace scratch
-theorem Nat.zero_add (n : Nat) :  Nat.zero.add n = n := by
-  induction n with
-  | zero => rfl
-  | succ n' ih =>
-    compute [Nat.add]
-    eq_refl
-
-
-theorem plus_succ_n (n m : Nat) : n.succ.add m = (n.add m).succ := by
-  induction n with
-  | zero =>
-    compute [Nat.add]
-    eq_refl
-  | succ n' ih =>
-    compute [Nat.add]
-    eq_refl
-
-end scratch
 /-!
 ## More Exercises
 
@@ -1227,7 +1316,7 @@ theorem negation_fn_applied_twice :
     intro f H b
     rewrite [H]
     rewrite [H]
-    apply Bool.not_not
+    exact Bool.not_not b
   ]]
 
 /-!
@@ -1237,7 +1326,7 @@ Prove the following theorem.
 Hint: You'll need to use case analysis on both boolean arguments.
 -/
 
-theorem andb_eq_orb :
+theorem and_eq_or :
   ∀ (b c : Bool),
   (b.and c = b.or c) →
   b = c
@@ -1255,7 +1344,8 @@ theorem andb_eq_orb :
 
 /-!
 ### Exercise: 3 stars, standard (binary)
-We can generalize our unary representation of natural numbers to the more efficient binary representation by treating a binary number as a sequence of constructors B0 and B1 (representing 0s and 1s), terminated by a Z.
+We can generalize our unary representation of natural numbers to the more efficient binary
+representation by treating a binary number as a sequence of constructors B0 and B1(representing 0s and 1s), terminated by a Z.
 
 Hint: You'll need to use pattern matching and recursion.
 -/
@@ -1266,16 +1356,22 @@ inductive Bin where
   | B1 (n : Bin)
 
 
-def incr (b : Bin) : Bin :=
+/--
+This is the successor function for binary numbers. It takes a binary number and returns
+the next binary number in sequence.
+-/
+def Bin.succ (b : Bin) : Bin :=
   match b with
-  | .Z => .B1 .Z
-  | .B0 b' => .B1 b'
-  | .B1 b' => .B0 (incr b')
+  | .Z => .B1 .Z  -- zero
+  | .B0 b' => .B1 b'  -- if the last bit is 0
+  | .B1 b' => .B0 (Bin.succ b')  -- if the last bit is 1, we need to carry over
 
-def bin_to_nat (b : Bin) : Nat :=
+
+def Bin.toNat (b : Bin) : Nat := solution[[
   match b with
-  | .Z => .zero
-  | .B0 b' => Nat.add (bin_to_nat b') (bin_to_nat b')
-  | .B1 b' => Nat.succ (Nat.add (bin_to_nat b') (bin_to_nat b'))
+  | .Z => Nat.zero
+  | .B0 b' => (Bin.toNat b').add (Bin.toNat b')
+  | .B1 b' => ((Bin.toNat b').add (Bin.toNat b')).succ
+]]
 
 end scratch

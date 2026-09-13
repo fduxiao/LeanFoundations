@@ -60,14 +60,14 @@ This is the same as:
 -/
 
 theorem plus_1_neq_0_secondtry : ∀ n : Nat, n + 1 ≠ 0 :=
-  fun n => fun H => Nat.noConfusion H
+  fun _n => fun H => Nat.noConfusion H
 
 /-!
 Or even:
 -/
 
 theorem plus_1_neq_0_thirdtry : ∀ n : Nat, n + 1 ≠ 0 :=
-  fun n H => Nat.noConfusion H
+  fun _n H => Nat.noConfusion H
 
 /-!
 You can see that proof scripts and proof objects serve the same purpose — they carry out the
@@ -128,7 +128,7 @@ For example:
 -/
 
 theorem plus_1_neq_0 : ∀ n : Nat, n + 1 ≠ 0 :=
-  fun n H => Nat.noConfusion H
+  fun _n H => Nat.noConfusion H
 
 theorem plus_1_neq_0' (n : Nat) : n + 1 ≠ 0 :=
   fun H => Nat.noConfusion H
@@ -296,7 +296,11 @@ Complete the definition of the following proof object:
 -/
 
 theorem ex_ev_Sn : ∃ n : Nat, Even (n + 1) := by
-  sorry
+  solution[[
+    exists 1
+    constructor
+    constructor
+  ]]
 
 /-!
 ### True and False
@@ -375,26 +379,6 @@ theorem leibniz_equality__equality : ∀ (X : Type) (x y : X),
 end MyLogic
 
 /-!
-## Inversion, Again
-
-We've seen that tactics like `cases` and `induction` can be applied to evidence for inductively
-defined propositions, not just to evidence for inductively defined data. This should make sense,
-since both are defined using `inductive`.
-
-The way `cases` works is to identify each constructor that could have been used to build the
-evidence and generate a subgoal in which we assume that the evidence was built with that
-constructor.
-
-### Exercise: 3 stars, standard (ev_plus_plus)
-
-Here's an exercise that just requires applying existing lemmas. No induction or case analysis
-is needed, but some of the rewriting may be tedious.
--/
-
-theorem ev_plus_plus_simple : ∀ n m p, Even (n + m) → Even (n + p) → Even (m + p) := by
-  sorry
-
-/-!
 ## Computational vs. Propositional Types
 
 We have seen that Lean expressions can have types like `Nat`, which classify *computational*
@@ -428,7 +412,7 @@ interesting evidence. In such cases, `cases` still works, but it doesn't generat
 subgoals. Try this to see what happens:
 -/
 
-theorem bogus_subgoal : True → False := by
+#try bogus_subgoal : True → False := by
   intro H
   cases H
   -- No subgoals generated!
@@ -444,19 +428,3 @@ theorem b_times2 : ∀ b : Nat, Even (b * 2) := by
   intro b
   rw [Nat.mul_comm]
   apply ev_double
-
-/-!
-## Additional Exercises
-
-### Exercise: 2 stars, standard, optional (ev_plus_one)
-
-This exercise explores how hypotheses work in Lean.
--/
-
-theorem ev_plus_one : ∀ n, Even (n + 1) → False := by
-  intro n H
-  cases H with
-  | succ2 n' H' =>
-    -- We have ev (n' + 2), but n + 1 = n' + 2 means n = n' + 1
-    -- This leads to a contradiction since n + 1 cannot be even
-    sorry

@@ -77,6 +77,13 @@ def NatProd.snd (p : NatProd) : Nat :=
 #eval (NatProd.pair (NatProd.pair 5 6).snd 7).fst  -- First extracts 6, then pairs (6,7), then extracts 6
 
 /-!
+Lean also provides a syntactic sugar for the projection functions.
+-/
+#eval (NatProd.pair 3 5).1  -- Should evaluate to 3
+#eval (NatProd.pair 3 5).2  -- Should evaluate to 5
+#eval (NatProd.pair (NatProd.pair 5 6).2 7).1
+
+/-!
 The pattern matching expression `match p with | NatProd.pair x y => ...` works like this:
 1. Take the input value `p`
 2. Check if it matches the pattern `NatProd.pair x y`
@@ -212,7 +219,9 @@ to `n` and `snd (NatProd.pair n m)` to `m`, making the right side identical to t
 theorem surjectivePairing : ∀ p : NatProd, p = NatProd.pair p.fst p.snd := by
   intro p
   match p with
-  | NatProd(n, m) => eq_refl  -- Or: cases p with | pair n m => eq_refl
+  | NatProd(n, m) =>
+    compute [NatProd.fst, NatProd.snd]
+    eq_refl  -- Or: cases p with | pair n m => eq_refl
 
 /-!
 The theorem `surjectivePairing` states the same property but for an arbitrary pair `p`,
@@ -233,14 +242,26 @@ theorem sndFstIsSwap : ∀ p : NatProd, NatProd.pair p.snd p.fst = p.swap := by
   intro p
   -- Hint: Think about how to expose the structure of p
   -- Then consider how swapPair is defined
-  sorry  -- TODO: Prove this
+  cases p with
+  | pair f s =>
+    compute [NatProd.swap]
+    solution[[
+      compute [NatProd.fst, NatProd.snd]
+      eq_refl
+    ]]
+
 
 -- EXERCISE: 1 star, standard, optional (fst_swap_is_snd)
 theorem fstSwapIsSnd : ∀ p : NatProd, p.swap.fst = p.snd := by
   intro p
   -- Hint: First understand what the theorem is stating in plain language
   -- Then think about the definitions of fst, swapPair, and snd
-  sorry  -- TODO: Prove this
+  cases p with
+  | pair f s =>
+    compute [NatProd.swap]
+    solution[[
+      eq_refl
+    ]]
 
 
 /-!
@@ -855,10 +876,32 @@ The proof uses induction on `l1`:
    - Associativity: `1 + (length l1' + length l2) = 1 + length l1' + length l2`
    - Commutativity: We can swap the order of terms
    These properties let us complete the proof.
-
-Now we can use this lemma to prove that reversing a list preserves its length:
 -/
 
+/-!
+Another case is that the `length` of `l1 ++ l2` is the sum of the lengths of `l1` and `l2`.
+-/
+
+theorem appLength: ∀ (l1 l2: NatList),
+  length (l1 ++ l2) = length l1 + length l2
+:= by
+  intro l1 l2
+  induction l1 with
+  | nil =>
+    simp [app, length]  -- Base case: length ([] ++ l2) = 0 + length l2
+  | cons x xs IH =>
+    simp [app, length]  -- Inductive case: length ((x :: xs) ++ l2) = 1 + length (xs ++ l2)
+    rw [IH]             -- Use the induction hypothesis to rewrite length (xs ++ l2)
+    rewrite [Nat.add_assoc]
+    rewrite [Nat.add_assoc]
+    have E: length l2 + 1 = 1 + length l2 := by
+      rw [Nat.add_comm]
+    rw [E]
+
+
+/-!
+Now we can use this lemma to prove that reversing a list preserves its length:
+-/
 -- Definition of rev (reverse a list)
 def rev (l : NatList) : NatList :=
   match l with
@@ -868,9 +911,14 @@ def rev (l : NatList) : NatList :=
 
 theorem revLength : ∀ l : NatList, length (rev l) = length l := by
   intro l
-  induction l
-  case nil => eq_refl
-  case cons n l' ih => sorry -- We'll complete this proof later
+  induction l with
+  | nil =>
+    eq_refl
+  | cons x xs IH =>
+    simp [rev, length]
+    rw [appLength]
+    simp [length]
+    exact IH
 
 
 /-!
@@ -1191,12 +1239,18 @@ theorem updateEq : ∀ (d : PartialMap) (x : Identifier) (v : Nat),
   intro d x v
   -- The key insight: when we add a new entry with key x, then search for x,
   -- we'll find the entry we just added
-  unfold update find
+  compute [update, find]
   rw [eqbIdRefl x]
   simp
 
 -- EXERCISE: 1 star, standard (update_neq)
 theorem updateNeq : ∀ (d : PartialMap) (x y : Identifier) (o : Nat),
-    eqbId x y = false → find x (update d y o) = find x d := sorry
+  eqbId x y = false → find x (update d y o) = find x d
+:= by
+  intro d x y o H
+  solution[[
+    compute [update, find]
+    simp [H]
+  ]]
 
 end NatList

@@ -7,6 +7,8 @@ This file is a Lean 4 translation of the "Inductively Defined Propositions"
 chapter from Software Foundations (Logical Foundations).
 -/
 
+import LeanFoundations._MyTactics
+
 /-!
 # Inductively Defined Propositions
 In Lean, not only do we want to define some mathematical objects and write functions (algorithms) on
@@ -65,7 +67,10 @@ theorem even2_even1 (n: Nat):
       _ = beven (2 * k' + 2) := by
         rewrite [Nat.mul_add]
         simp
-    sorry
+    solution[[
+      simp [beven]
+      exact IHk'
+    ]]
 
 
 /-!
@@ -81,7 +86,7 @@ theorem even1_even2 (n: Nat):
     exists 0
   case succ n' IHn' =>
     simp [beven] at H
-    admit
+    sorry
 ```
 Here, we are facing the inductive hypothesis problem again. In the `succ` case, the hypothesis
 `H` is the `beven (n' + 1) = true`, i.e., some `H: beven n' = False`. However the type of the
@@ -522,9 +527,16 @@ theorem le_inversion : ∀ (n m : Nat),
   intro n m H
   cases H with
   | refl =>
-    sorry
+    solution[[
+      left
+      eq_refl
+    ]]
   | step m' H' =>
-    sorry
+    solution[[
+      right
+      exists m'
+    ]]
+
 
 /-!
 Lean will remove unnecessary cases for you automatically. For example, in the following, if we have
@@ -576,8 +588,11 @@ theorem one_not_even : ¬ Even 1 := by
 theorem SSSSev__even : ∀ n, Even (n + 4) → Even n := by
   intro n H
   cases H with
-  | succ2 n' H' =>
-    admit
+  | succ2 n' H' => solution[[
+    cases H' with
+    | succ2 n'' H'' =>
+      exact H''
+  ]]
 
 /-!
 ### Exercise: 1 star, standard (ev5_nonsense)
@@ -588,8 +603,11 @@ Prove the following result using `cases`.
 theorem ev5_nonsense : Even 5 → 2 + 2 = 9 := by
   intro H
   cases H with
-  | succ2 n' H' =>
-    admit
+  | succ2 n' H' => solution[[
+    cases H' with
+    | succ2 n'' H'' =>
+    cases H''
+  ]]
 
 
 /-!
@@ -653,7 +671,7 @@ In Lean, you just apply the tactic `induction` on some `e: Even n` and you will
 get the base case and the inductive case:
 -/
 
-theorem ev_sum : ∀ n m, Even n → Even m → Even (n + m) := by
+theorem ev_sum : ∀ {n m}, Even n → Even m → Even (n + m) := by
   intro n m Hn Hm
   induction Hn with
   | zero =>  -- This is the base case, we need to show `Even (0 + m)`, which is just `Even m`.
@@ -702,7 +720,7 @@ theorem ev_plus_plus : ∀ n m p, Even (n + m) → Even (n + p) → Even (m + p)
   intro n m p Hnm Hnp
   -- We'll use the fact that Even (n + m) and Even (n + p) implies Even ((n + m) + (n + p))
   -- which equals Even (2*n + m + p), and since Even (2*n), we get Even (m + p)
-  have h1 : Even ((n + m) + (n + p)) := ev_sum (n + m) (n + p) Hnm Hnp
+  have h1 : Even ((n + m) + (n + p)) := ev_sum Hnm Hnp
   have h2 : (n + m) + (n + p) = (n + n) + (m + p) := by
     rw [← Nat.add_assoc, Nat.add_assoc n m n, Nat.add_comm m n, ← Nat.add_assoc, Nat.add_assoc]
   rw [h2] at h1
@@ -710,6 +728,81 @@ theorem ev_plus_plus : ∀ n m p, Even (n + m) → Even (n + p) → Even (m + p)
     rw [← Nat.two_mul]
     apply ev_double
   apply ev_ev__ev (n + n) (m + p) h1 h3
+
+
+/-!
+We prove some basic facts about `le`.
+-/
+theorem le.zero {n: Nat}:
+  le 0 n
+:= by
+  induction n
+  case zero =>
+    apply le.refl
+  case succ n' IH =>
+    apply le.step
+    exact IH
+
+
+
+theorem le.succ {n: Nat}:
+  le n (n + 1)
+:= by
+  apply le.step
+  apply le.refl
+
+
+theorem le.trans {n m p: Nat}:
+  le n m ->
+  le m p ->
+  le n p
+:= by
+  intro Hnm Hmp
+  induction Hmp
+  case refl =>
+    exact Hnm
+  case step m' Hmp' IH =>
+    apply le.step
+    apply IH
+
+
+theorem le.succ_inj (n m: Nat):
+  le n.succ m.succ ->
+  le n m
+:= by
+  intro H
+  solution[[
+    cases H with
+    | refl =>
+      apply le.refl
+    | step m' H' =>
+      apply le.trans
+      . apply le.succ
+      . exact H'
+  ]]
+
+
+theorem le.add_one {m n: Nat}:
+  le (m + 1) (n + 1) ->
+  le m n
+:= by
+  exact le.succ_inj m n
+
+
+theorem le_add_same {m n p: Nat}:
+  le (m + p) (n + p) ->
+  le m n
+:= by
+  intro H
+  induction p generalizing m n
+  case zero =>
+    simp_all
+  case succ p IH =>
+    solution[[
+      apply IH
+      apply le.add_one
+      exact H
+    ]]
 
 
 /-!

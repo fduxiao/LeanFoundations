@@ -88,3 +88,30 @@ example : add5 3 = 8 := by
   ]]
 
 end Solution
+
+
+namespace TryCommand
+open Lean Lean.Elab Command Term
+
+elab "#try " _name:declId ? sig:(declSig) ":=" val:term: command =>
+  liftTermElabM
+    try
+      let ⟨binders, typeStx⟩ := Elab.expandDeclSig sig
+      Term.elabBinders binders.getArgs fun _xs => do
+        let tp ← elabType typeStx
+        discard $ elabTermEnsuringType val tp
+        synthesizeSyntheticMVarsNoPostponing
+    catch | e => throwError e.toMessageData
+
+
+#try add_comm : forall x y: Nat, x + y = y + x := by
+  grind
+
+#try add_comm : forall x y: Nat, x + y = y + x := by
+  sorry
+
+#try (x y: Nat) {z}: x + y + z = z + y + x := by
+  omega
+
+
+end TryCommand
