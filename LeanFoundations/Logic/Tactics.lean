@@ -1184,24 +1184,26 @@ example (n: Nat): n = 0 ∨ n ≠ 0 := by
 Let's look at the following proof. Suppose `f n = b.not`. Then `(f n).not = b`. There are many
 ways to prove it. For example, we can prove this by a `rewrite` and then using the idempotence
 of `not`. To illustrate why we need equality in `cases`, we do the case anaylsis on `f n`.
-```lean
-example (n: Nat) (f: Nat -> Bool) (b: Bool): f n = b.not -> (f n).not = b := by
+-/
+
+
+#try (n: Nat) (f: Nat -> Bool) (b: Bool): f n = b.not -> (f n).not = b := by
   intro H
-  unfold not
   cases (f n) with
   | true =>
+    simp
     sorry
   | false =>
+    simp
     sorry
-```
 
-In this proof, after we `unfold not`, we have to do a pattern match for `f n`. This suggests
-that we should do a case analysis on `f n`:
+/-!
+In this proof, after we do the pattern match for `f n`, we have two cases:
 1. if `f n = true`, then we have to prove `false = b`;
 2. if `f n = false`, then we have to prove `true = b`.
 
 In either case, we meet with a trouble: we only know `f n = b.not`; how can we prove `b = true`
-or `b = false`? The reason is that after the `cases`, the information about `f n` and `b` is
+or `b = false`? The problem is that after the `cases`, the information about `f n` and `b` is
 thrown away. To solve it, we put the `E:` before `n` in `cases`. Then, Lean will generate an
 equality named `E` for us to `rewrite`.
 
@@ -1210,7 +1212,6 @@ equality named `E` for us to `rewrite`.
 
 example (n: Nat) (f: Nat -> Bool) (b: Bool): f n = b.not -> (f n).not = b := by
   intro H
-  unfold not
   cases E: (f n) with
   | true =>
     simp
@@ -1229,11 +1230,20 @@ If there exists a `match` (or `if`) in the goal, you can use the `split` instead
 of `cases E: term ...`.
 
 > If there is a `match` in some hypothesis `H`, use `split at H`.
+
+> Note that `Lean` changes its definition of `not` from `match` to `Bool.rec`.
+So, we make a custom `my_not` by `match`.
 -/
 
-example (n: Nat) (f: Nat -> Bool) (b: Bool): f n = b.not -> (f n).not = b := by
+def my_not (b: Bool): Bool :=
+  match b with
+  | true => false
+  | false => true
+
+
+example (n: Nat) (f: Nat -> Bool) (b: Bool): f n = b.not -> my_not (f n) = b := by
   intro H
-  unfold not
+  unfold my_not
   split
   next E =>
     -- Lean even provides this single tactic to do all the `rewrite` and `simp`.

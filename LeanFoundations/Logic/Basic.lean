@@ -583,7 +583,7 @@ inductive Nat where
 #check Nat.zero.succ
 #check Nat.succ (Nat.zero)
 
-open Nat
+open scratch.Nat
 #check zero
 #check succ
 #check zero.succ.succ

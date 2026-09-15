@@ -959,7 +959,7 @@ def conj_not: Proposition -> Proposition
   | p => p.not
 
 
-def conj_not_eqC {p: Proposition}:
+theorem conj_not_eqC {p: Proposition}:
   (conj_not p).eqC p.not
 := by
   induction p
@@ -1394,15 +1394,15 @@ theorem tautology_conj_top {p: Proposition}:
     cases D
     case bot =>
       specialize H (fun _ => false)
-      simp [Eval.eval] at H
+      simp [Eval.eval, Eval.satisfies] at H
     case single L =>
       cases L with
       | var x =>
         specialize H (fun _ => false)
-        simp [Eval.eval] at H
+        simp [Eval.eval, Eval.satisfies] at H
       | not x =>
         specialize H (fun _ => true)
-        simp [Eval.eval] at H
+        simp [Eval.eval, Eval.satisfies] at H
     case or p1 p2 D1 D2 =>
       apply tautology_disj_top
       . exact H
@@ -1904,7 +1904,8 @@ def Model: Kripke where
     let D: List World := mapWithIn L1 f
     exists D
     and_intros
-    . intro E
+    . -- D is not empty
+      intro E
       -- Since `D = []`, we must also have `L1 = []`.
       cases L1
       case cons => -- This case is impossible, since `D` is forced non-empty.
@@ -1926,10 +1927,12 @@ def Model: Kripke where
       replace HC := weak_append R HC
       apply u.property
       exact HC
-    . intro u' H
+    . -- each u is a sublist of all w' in D
+      intro u' H
       replace H := mapWithIn_spec.mp H
       grind
-    . intro p HD
+    . -- if each w in D proves p then u proves p, i.e., the transitivity of covering
+      intro p HD
       apply weak_append R
       apply multiImp_iff.mpr
       apply HC
@@ -1947,7 +1950,8 @@ def Model: Kripke where
       . apply multiImp_iff.mp
         specialize H2 _ I'
         apply H2.botE
-    . intro u' H
+    . -- forall u' in d, there exists w' in C such that w' is a sublist of u'
+      intro u' H
       replace H := mapWithIn_spec.mp H
       rcases H with ⟨Γ, I', E⟩
       have _: ¬ Γ.proves .bot := by
@@ -1958,6 +1962,9 @@ def Model: Kripke where
       let w': World := ⟨Γ, by assumption⟩
       exists w'
       simp_all [w', f]
+      apply (I _).mpr
+      left
+      exact I'
   Cover_trans := by
     intro C w P HC f
     have HD: exists D: List World,
@@ -2104,10 +2111,14 @@ theorem forces_iff_proves {w: World} {p: Proposition}:
             simp
         -- Since Γ covers itself, we can conclude that Γ ⊩ p1 ∨ p2.
         exists [⟨Γ, C⟩]
-        simp [Model.Cover_self]
-        right
-        apply IH2.mpr
-        exact H
+        apply And.intro
+        . apply Model.Cover_self
+        . intro w' I
+          cases I <;> try contradiction
+          right
+          apply IH2.mpr
+          simp
+          exact H
       -- Now we have Γ1 is consistent.
       -- similarly, we discuss whether p2 :: Γ is inconsistent.
       rcases Γ2.decide .bot with C2 | I2
@@ -2137,10 +2148,12 @@ theorem forces_iff_proves {w: World} {p: Proposition}:
         rcases K I with I | I
         . simp_all [w1, Γ1]
           left
+          apply IH1.mpr
           apply Context.proves.ax
           simp
         . simp_all [w2, Γ2]
           right
+          apply IH2.mpr
           apply Context.proves.ax
           simp
   case imp p1 p2 IH1 IH2 =>

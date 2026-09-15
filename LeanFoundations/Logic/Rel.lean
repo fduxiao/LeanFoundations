@@ -98,13 +98,13 @@ A relation `R` on a set `X` is *irreflexive* if every element of `X` is not rela
 class Reflexive {X} (P: Relation X) where
   refl: forall {x: X}, P x x
 
-def Relation.refl {X: Type} {P: Relation X} [inst: Reflexive P]:
+theorem Relation.refl {X: Type} {P: Relation X} [inst: Reflexive P]:
   forall {x: X}, P x x := inst.refl
 
 class Irreflexive {X} (P: Relation X) where
   irrefl: forall {x: X}, Not (P x x)
 
-def Relation.irrefl {X: Type} {P: Relation X} [inst: Irreflexive P]:
+theorem Relation.irrefl {X: Type} {P: Relation X} [inst: Irreflexive P]:
   forall {x: X}, Not (P x x) := inst.irrefl
 
 
@@ -162,7 +162,7 @@ A relation `R` is *transitive* if `R a c` holds whenever `R a b` and `R b c` do.
 class Transitive {X} (R: Relation X) where
   trans: forall {x y z: X}, R x y -> R y z -> R x z
 
-def Relation.trans {X: Type} {R: Relation X} [inst: Transitive R]:
+theorem Relation.trans {X: Type} {R: Relation X} [inst: Transitive R]:
   forall {x y z: X}, R x y -> R y z -> R x z := inst.trans
 
 
@@ -222,14 +222,14 @@ if the only "cycles" in `R` are trivial ones.
 class Symmetric {X} (P: Relation X) where
   symm: forall {x y: X}, P x y -> P y x
 
-def Relation.symm {X} {P: Relation X} [inst: Symmetric P]:
+theorem Relation.symm {X} {P: Relation X} [inst: Symmetric P]:
   forall {x y: X}, P x y -> P y x := inst.symm
 
 
 class Antisymmetric {X} (P: Relation X) where
   asymm: forall {x y: X}, P x y -> P y x -> x = y
 
-def Relation.asymm {X} {P: Relation X} [inst: Antisymmetric P]:
+theorem Relation.asymm {X} {P: Relation X} [inst: Antisymmetric P]:
   forall {x y: X}, P x y -> P y x -> x = y := inst.asymm
 
 
@@ -357,7 +357,7 @@ class KeepCong {X: Type} (R S: Relation X) where
     forall {x y}, (S x y) -> S (f x) (f y)
 
 
-def Relation.keep_cong {X: Type}
+theorem Relation.keep_cong {X: Type}
   {R S: Relation X} (f: X -> X)
   [inst: KeepCong R S]:
     (forall {x y}, (R x y) -> R (f x) (f y)) ->
@@ -382,7 +382,7 @@ class SubRel {X} (P: Relation X) (Q: Relation X): Prop where
 
 notation: 60 P " sub_rel " Q => SubRel P Q
 
-def Relation.super {X: Type} {R Super: Relation X}
+theorem Relation.super {X: Type} {R Super: Relation X}
   [inst: R sub_rel Super]: forall {x y: X}, R x y -> Super x y
 :=
   inst.inclusion
@@ -1064,7 +1064,7 @@ Normal terms with respect to multi-step reduction
 def Relation.MNormal {X: Type} (R: Relation X) (x: X) := forall {y}, RTCl R x y -> x = y
 
 
-def Relation.Normal.MNormal {X: Type} {R: Relation X}:
+theorem Relation.Normal.MNormal {X: Type} {R: Relation X}:
   forall {x: X}, R.Normal x -> R.MNormal x
 := by
   intro n HR m HMR
@@ -1110,8 +1110,11 @@ class Confluent {X: Type} (R: Relation X) where
   confl: forall {m1 m2 m3},
     RTCl R m1 m2 -> RTCl R m1 m3 -> exists m4, RTCl R m2 m4 /\ RTCl R m3 m4
 
-def Relation.confl {X: Type} (R: Relation X) [inst: Confluent R]
-  {m1 m2 m3} := inst.confl (m1 := m1) (m2 := m2) (m3 := m3)
+theorem Relation.confl {X: Type} (R: Relation X) [inst: Confluent R]
+  {m1 m2 m3}
+:
+  RTCl R m1 m2 → RTCl R m1 m3 → ∃ m4, RTCl R m2 m4 ∧ RTCl R m3 m4
+:= inst.confl (m1 := m1) (m2 := m2) (m3 := m3)
 
 
 /-!
@@ -1122,8 +1125,11 @@ _semi-confluency_.
 class SemiConfluent {X: Type} (R: Relation X) where
   semi_confl: forall {m1 m2 m3}, R m1 m2 -> RTCl R m1 m3 -> exists m4, RTCl R m2 m4 /\ RTCl R m3 m4
 
-def Relation.semi_confl {X: Type} (R: Relation X) [inst: SemiConfluent R]
-  {m1 m2 m3} := inst.semi_confl (m1 := m1) (m2 := m2) (m3 := m3)
+theorem Relation.semi_confl {X: Type} (R: Relation X) [inst: SemiConfluent R]
+  {m1 m2 m3}
+:
+R m1 m2 → RTCl R m1 m3 → ∃ m4, RTCl R m2 m4 ∧ RTCl R m3 m4
+:= inst.semi_confl (m1 := m1) (m2 := m2) (m3 := m3)
 
 
 /-!
@@ -1162,8 +1168,11 @@ class ChurchRosser {X: Type} (R: Relation X) where
   church_rosser: forall {m2 m3},
     ECl R m2 m3 -> exists m4, RTCl R m2 m4 /\ RTCl R m3 m4
 
-def Relation.church_rosser {X: Type} (R: Relation X) [inst: ChurchRosser R]
-  {m2 m3} := inst.church_rosser (m2 := m2) (m3 := m3)
+theorem Relation.church_rosser {X: Type} (R: Relation X) [inst: ChurchRosser R]
+  {m2 m3}
+:
+  ECl R m2 m3 → ∃ m4, RTCl R m2 m4 ∧ RTCl R m3 m4
+:= inst.church_rosser (m2 := m2) (m3 := m3)
 
 
 /-!
